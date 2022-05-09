@@ -16,12 +16,6 @@ parser.add_argument('--db-port', type=int, default=3306, help="connect to this p
 parser.add_argument('--db-name', type=str, default="musterpraxis_dwh", help="use this database on the dwh")
 args = parser.parse_args()
 
-DB_PASSWORD = "password"
-DB_NAME = "musterpraxis_dwh"
-DB_HOST = "127.0.0.1"
-DB_PORT = 3306
- #DB_CONNSTRING = f"mariadb+mariadbconnector://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-
 try:
     conn = mariadb.connect(
         user=args.db_user,
@@ -37,5 +31,11 @@ cur = conn.cursor()
 
 cur.execute("SELECT created, lastName FROM patient ORDER BY created LIMIT 10")
 
+print(dir(cur))
+
+print(cur.fetchall())
+
+
 for row in cur:
-    log.info(row)
+    pass
+    #log.info(row)

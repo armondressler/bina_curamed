@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "args": [""],
+            "args": ["--db-user","musterpraxis_dwh"],
             "console": "integratedTerminal",
             "justMyCode": true
         }
