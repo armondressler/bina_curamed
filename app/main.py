@@ -1,9 +1,9 @@
 import argparse
 import logging
 import sys
-from socket import timeout
 
-import mariadb
+from chartparameters import CHART_COLLECTION, DBParams
+from charts import Chart
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 log = logging.getLogger()
@@ -16,26 +16,15 @@ parser.add_argument('--db-port', type=int, default=3306, help="connect to this p
 parser.add_argument('--db-name', type=str, default="musterpraxis_dwh", help="use this database on the dwh")
 args = parser.parse_args()
 
-try:
-    conn = mariadb.connect(
-        user=args.db_user,
-        password=args.db_password,
-        host=args.db_host,
-        port=args.db_port,
-        database=args.db_name)
-except mariadb.Error as e:
-    print(f"Error connecting to database: {e}")
-    sys.exit(1)
+dbparams = DBParams(
+    database=args.db_name,
+    user=args.db_user,
+    password=args.db_password,
+    host=args.db_host,
+    port=args.db_port)
 
-cur = conn.cursor()
+queryparams = {"start_date": "2022-03-20", "end_date": "2022-03-28"}
 
-cur.execute("SELECT created, lastName FROM patient ORDER BY created LIMIT 10")
+a = Chart("anzahl_neue_faelle_pro_tag", db_parameters=dbparams, query_parameters=queryparams)
 
-print(dir(cur))
-
-print(cur.fetchall())
-
-
-for row in cur:
-    pass
-    #log.info(row)
+a.get_bokeh_json()
