@@ -2,7 +2,7 @@ from dataclasses import dataclass, asdict
 import logging
 from exceptions import QueryResultTransformationError
 
-from bokehfigures import AnzahlNeueFaelleProTag
+from bokehfigures import AnzahlNeueFaelleProTag, DurchschnittAlterProSitzung
 
 log = logging.getLogger()
 
@@ -100,5 +100,12 @@ CHART_COLLECTION = {
         "transformers": [
             #ConvertToDateTypeTransformer(date_column_name="date")
         ]
+    },
+    "altersgruppe_sitzung_pro_tageszeit": {
+        "dbquery": DBQuery(
+            query="SELECT TIMESTAMPDIFF(YEAR, p.birthDate, CURDATE()) AS age FROM session AS s JOIN patient AS p ON s.patient = p.id WHERE s.created BETWEEN %(start_date)s AND %(end_date)s;",
+            required_parameters=("start_date", "end_date")
+        ),
+        "figure": DurchschnittAlterProSitzung
     }
 }

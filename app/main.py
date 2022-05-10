@@ -2,7 +2,7 @@ import argparse
 import logging
 import sys
 
-from chartparameters import CHART_COLLECTION, DBParams
+from chartparameters import DBParams
 from charts import Chart
 
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
@@ -25,6 +25,7 @@ dbparams = DBParams(
 
 queryparams = {"start_date": "2022-03-20", "end_date": "2022-03-28"}
 
-a = Chart("anzahl_neue_faelle_pro_tag", db_parameters=dbparams, query_parameters=queryparams)
+#a = Chart("anzahl_neue_faelle_pro_tag", db_parameters=dbparams, query_parameters=queryparams)
+a = Chart("durschnitt_alter_pro_sitzung", db_parameters=dbparams, query_parameters=queryparams)
 
 a.get_bokeh_json()
