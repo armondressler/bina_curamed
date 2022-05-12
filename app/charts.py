@@ -4,9 +4,10 @@
 #Definition bokeh figure (glyphs, annotations etc) -> evtl direkt als funktion definieren
 
 import logging
+from typing import Dict, List
+from bokehfigures import CHART_COLLECTION, BokehFigure
 
-import mariadb
-from chartparameters import CHART_COLLECTION, DBParams
+from chartparameters import DBQuery, Database
 from exceptions import ValidationError
 
 log = logging.getLogger()
@@ -14,67 +15,46 @@ log = logging.getLogger()
 class Chart:
     collection = CHART_COLLECTION
 
-    def __init__(self, name, db_parameters: DBParams, query_parameters: dict =None):
+    def __init__(self, name: str, database_parameters: Dict[str, str], query_parameters: Dict[str, str]):
         self.name = name
-        self.db_parameters = db_parameters
-        self.query_result_transformers = self._get_query_result_transformers()
-        self.query_parameters = self._ensure_required_query_parameters(query_parameters)
-        self.db_query = self._get_db_query()
+        self.collection_item = self._get_collection_item()
+        self.database_parameters = database_parameters
+        self.database_queries = self._get_database_queries()
         self.figure = self._get_figure()
-        self.query_result = {}
+        self._parameterize_database_queries(query_parameters)
 
-    def _get_db_query(self):
+    def _get_collection_item(self):
         collection_item = Chart.collection.get(self.name)
         if collection_item is None:
             raise ValidationError(f"Chart collection does not contain a key {self.name}")
-        return collection_item.get("dbquery").query
+        return collection_item
 
-    def _get_figure(self):
-        collection_item = Chart.collection.get(self.name)
-        return collection_item.get("figure")
+    def _parameterize_database_queries(self, parameters: dict):
+        for _, query in self.database_queries.items():
+            query.parameters = parameters
 
-    def _get_query_result_transformers(self):
-        collection_item = Chart.collection.get(self.name)
-        return collection_item.get("transformers")
+    def _get_database_queries(self) -> Dict[str, DBQuery]:
+        dbqueries: Dict[str, DBQuery] = {}
+        for data_source_name, data_source in self.collection_item.get("data_sources", {}).items():
+            if isinstance(data_source, DBQuery):
+                dbqueries[data_source_name] = data_source
+        return dbqueries
 
-    def _ensure_required_query_parameters(self, query_parameters):
-        """We want to instanciate Chart with query parameters as a dict to ensure all the required parameters are present.
-        However the execution of the query on the actual db just needs a tuple of the dict values.
-        """
-        for required_parameter in Chart.collection.get(self.name).get("dbquery").required_parameters:
-            if required_parameter not in query_parameters:
-                raise ValidationError(f"Required parameter {required_parameter} not present")
-        return query_parameters
+    def _get_figure(self) -> type[BokehFigure]:
+        return self.collection_item.get("figure")
+        
+    def _transform_query_result(self) -> None:
+        for _, query in self.database_queries.items():
+            query.transform_data()
 
-    def _transform_to_columndata_dict(self, columns, data):
-        """create dict as expected by bokeh with keys being names of the column and value being a list of its values"""
-        query_result_dict = {}
-        for index, column in enumerate(columns):
-            query_result_dict[column] = [tup[index] for tup in data]
-        return query_result_dict
-
-    def _query_database(self):
-        try:
-            conn = mariadb.connect(**self.db_parameters.as_dict())
-        except mariadb.Error as e:
-            log.error(f"Failed to connect to database: {e}")
-            raise
-        cur = conn.cursor()
-        log.debug(f"Running query: \"{self.db_query}\" with parameters {self.query_parameters}")
-        cur.execute(self.db_query, self.query_parameters)
-        columns = [column_descriptor[0] for column_descriptor in cur.description]
-        data = cur.fetchall()
-        self.query_result = self._transform_to_columndata_dict(columns=columns, data=data)
-        conn.close()
-
-    def _transform_query_result(self):
-        if self.query_result_transformers is None:
-            return
-        for transformer in self.query_result_transformers:
-            self.query_result = transformer.transform(self.query_result)
+    def _update_datasources(self):
+        queries: List[DBQuery] = []
+        for _, query in self.database_queries.items():
+            queries.append(query)
+        Database(**self.database_parameters).execute_queries(queries)
 
     def get_bokeh_json(self):
-        self._query_database()
+        self._update_datasources()
         self._transform_query_result()
-        print(self.query_result)
-        self.figure(data=self.query_result)
+        self.figure
+        self.figure(data=self.database_queries)

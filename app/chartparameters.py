@@ -1,45 +1,121 @@
-from dataclasses import dataclass, asdict
 import logging
-from exceptions import QueryResultTransformationError
+from typing import List
 
-from bokehfigures import AnzahlNeueFaelleProTag, DurchschnittAlterProSitzung
+import mariadb
+import pandas
+import pandas as pd
+
+from exceptions import QueryResultTransformationError, ValidationError
 
 log = logging.getLogger()
 
-@dataclass
-class DBParams:
-    database: str
-    user: str
-    password: str
-    host: str
-    port: int
-
-    def as_dict(self):
-        return asdict(self)
-
-@dataclass
-class DBQuery:
-    query: str
-    required_parameters: tuple
 
 class DBQueryResultsTransformer:
     def transform(self, query_result):
         log.warning(f"Missing transform method for {type(self)}")
         raise QueryResultTransformationError(f"Missing transform method for {type(self)}")
 
+class DBQuery:
+    def __init__(self, query: str, required_parameters: tuple, transformers: None|List[DBQueryResultsTransformer] = None):
+        self.query = query
+        self.required_parameters = required_parameters
+        self.transformers = transformers or []
+        self.columns: List[str] = []
+        self.data = []
+        self._dataframe: pd.DataFrame = pd.DataFrame()
+        self._parameters = {}
+
+    @property
+    def parameters(self) -> dict:
+        return self._parameters
+
+    @parameters.setter
+    def parameters(self, params: dict) -> None:
+        missing_required_parameters = set(self.required_parameters).difference(params)
+        if missing_required_parameters:
+            raise ValidationError(f"Missing parameter(s): {', '.join(missing_required_parameters)}")
+        self._parameters = params
+
+    @property
+    def dataframe(self) -> pd.DataFrame:
+        if self._dataframe.empty:
+            self._dataframe = self._to_dataframe(self.data, self.columns)
+        return self._dataframe
+
+    @dataframe.setter
+    def dataframe(self, frame: pd.DataFrame):
+        self._dataframe = frame
+
+    def transform_data(self):
+        for transformer in self.transformers:
+            self.dataframe = transformer.transform(self.dataframe)
+
+    def _to_dataframe(self, data: list, columns: List[str]) -> pandas.DataFrame:
+        try:
+            frame = pd.DataFrame(data, columns=columns)
+        except ValueError as err:
+            raise QueryResultTransformationError(f"Failed to transform mariadb query result into pandas dataframe: {err}")
+        return frame
+
+class Database:
+    def __init__(self, user: str, password: str, host: str, port: str, database: str):
+        self.user = user
+        self.password = password
+        self.host = host
+        self.port = port
+        self.database = database
+
+    def execute_queries(self, queries: List[DBQuery]) -> None:
+        try:
+            conn = mariadb.connect(user=self.user,
+                                   password=self.password,
+                                   host=self.host,
+                                   port=self.port,
+                                   database=self.database)
+        except mariadb.Error as err:
+            log.error(f"Failed to connect to database: {err}")
+            raise
+        cur = conn.cursor()
+        for query in queries:
+            log.debug(f"Running query: \"{query.query}\" with parameters {query.parameters}")
+            cur.execute(query.query, query.parameters)
+            columns = [column_descriptor[0] for column_descriptor in cur.description]
+            data = cur.fetchall()
+            log.debug(f"Query data: {data}")
+            log.debug(f"Query columns: {columns}")
+            query.columns, query.data = columns, data
+        conn.close()
+
+
 class ConvertToDateTypeTransformer(DBQueryResultsTransformer):
     def __init__(self, date_format="%Y-%m-%d", date_column_name="date"):
         self.date_format = date_format
         self.date_column_name = date_column_name
 
-    def transform(self, query_result):
+    def transform(self, data: list, columns: List[str]):
         from datetime import datetime
-        datecolumn = query_result.get(self.date_column_name)
-        if datecolumn is None:
-            raise QueryResultTransformationError(f"Column {self.date_column_name} missing in query result data (available: {query_result.keys().join(', ')})")   
-        
-        query_result[self.date_column_name] = [datetime.strptime(d, '%Y-%m-%d') for d in datecolumn]
-        return query_result
+        try:
+            datecolumn_index = columns.index(self.date_column_name)
+        except ValueError:
+            raise QueryResultTransformationError(f"Column {self.date_column_name} missing in query result data (available: {', '.join(columns)})")   
+        transformed_data = []
+        row: tuple
+        for row in data:
+            new_row = row[:datecolumn_index],datetime.strptime(row[datecolumn_index], '%Y-%m-%d'),row[datecolumn_index:]
+            transformed_data.append(tuple(new_row))
+        return columns, transformed_data
+
+class ConvertToHistogramTransformer(DBQueryResultsTransformer):
+    """Return distribution of pandas column column_name into bins with a new dataframe with columns count, left, right"""
+    def __init__(self, column_name, bins):
+        self.column_name = column_name
+        self.bins = bins
+
+    def transform(self, query_result):
+        import numpy as np
+        import pandas as pd
+        values, bins = np.histogram(query_result.get(self.column_name), bins=self.bins)
+        return pd.DataFrame({"count": values, "left": [b for b in bins[:-1]], "right": [b for b in bins[1:]]})
 
 class FillDateGapsTransformer(DBQueryResultsTransformer):
     def __init__(self, date_column_name="date", gappable_column_name="cases", fill_gaps_with_value=0):
@@ -51,7 +127,7 @@ class FillDateGapsTransformer(DBQueryResultsTransformer):
         from datetime import timedelta
         datecolumn = query_result.get(self.date_column_name)
         if datecolumn is None:
-            raise QueryResultTransformationError(f"Column {self.date_column_name} missing in query result data (available: {query_result.keys().join(', ')})")
+            raise QueryResultTransformationError(f"Column {self.date_column_name} missing in query result data (available: ???)")
         print(datecolumn[0], type(datecolumn[0]))
 
         start_date = datecolumn[0]
@@ -63,10 +139,8 @@ class FillDateGapsTransformer(DBQueryResultsTransformer):
 
         gappable_column = query_result.get(self.gappable_column_name)
         if gappable_column is None:
-            raise QueryResultTransformationError(f"Column {self.gappable_column_name} to be gapped with {self.fill_gaps_with_value} missing in query result data (available: {self.query_result.keys().join(', ')})")
+            raise QueryResultTransformationError(f"Column {self.gappable_column_name} to be gapped with {self.fill_gaps_with_value} missing in query result data (available: ???)")
 
-        new_datecolumn = [] #its getting late
-        new_gappable_column = []
         for i in range(delta.days + 1):
             day = start_date + timedelta(days=i)
             print(f"i is {i}")
@@ -80,32 +154,3 @@ class FillDateGapsTransformer(DBQueryResultsTransformer):
 
         return query_result
 
-
-        
-
-CHART_COLLECTION = {
-    "anzahl_neue_faelle_total": {
-        "dbquery": DBQuery(
-            query="SELECT count(*) as cases FROM `case` WHERE created BETWEEN ? AND ?;",
-            required_parameters=("start_date", "end_date")
-        ),
-
-    },
-    "anzahl_neue_faelle_pro_tag": {
-        "dbquery": DBQuery(
-            query="WITH recursive date_ranges AS (select %(start_date)s as date union all select date + interval 1 day from date_ranges where date < %(end_date)s) select date,COALESCE(cases, 0) as cases from date_ranges as a left join ( SELECT count(*) as cases,DATE_FORMAT(created,'%Y-%m-%d') as date2 FROM `case` WHERE created BETWEEN %(start_date)s AND %(end_date)s GROUP BY DATE_FORMAT(created,'%Y-%m-%d')) as b  on a.date = b.date2;",
-            required_parameters=("start_date", "end_date")
-        ),
-        "figure": AnzahlNeueFaelleProTag,
-        "transformers": [
-            #ConvertToDateTypeTransformer(date_column_name="date")
-        ]
-    },
-    "altersgruppe_sitzung_pro_tageszeit": {
-        "dbquery": DBQuery(
-            query="SELECT TIMESTAMPDIFF(YEAR, p.birthDate, CURDATE()) AS age FROM session AS s JOIN patient AS p ON s.patient = p.id WHERE s.created BETWEEN %(start_date)s AND %(end_date)s;",
-            required_parameters=("start_date", "end_date")
-        ),
-        "figure": DurchschnittAlterProSitzung
-    }
-}
