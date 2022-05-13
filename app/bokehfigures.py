@@ -3,7 +3,7 @@ from bokeh.plotting import figure, show
 from bokeh.embed import json_item
 from bokeh.models.formatters import BasicTickFormatter, DatetimeTickFormatter
 
-from chartparameters import ConvertToHistogramTransformer, DBQuery
+from chartparameters import ConvertToHistogramTransformer, DBQuery, ConvertToDateTypeTransformer
 
 from exceptions import ValidationError
 
@@ -23,27 +23,25 @@ class BokehFigure:
 
 class AnzahlNeueFaelleProTag(BokehFigure):
     def setup_figure(self):
-        query = self.data.get("anzahl_neue_faelle_pro_tag")
-        if query is None:
-            raise ValidationError(f"Cannot find query object for anzahl_neue_faelle_pro_tag")
-        p = figure(title="Neue Fälle pro Tag", y_axis_label="Neue Fälle", x_range=query.dataframe.get("date"))
-        p.vbar(x=query.dataframe.get("date"), top=query.dataframe.get("cases"), color="green", width=0.8)
+        df = self.data["anzahl_neue_faelle_pro_tag"].dataframe
+        p = figure(title="Neue Fälle pro Tag", y_axis_label="Neue Fälle", x_range=df.get("date"))
+        p.vbar(x=df.get("date"), top=df.get("cases"), color="green", width=0.8)
         #p.line(x=self.data.get("date"), y=self.data.get("cases"), color="green")
         p.yaxis.minor_tick_out = 0
         show(p)
 
 class VerteilungAltersgruppenSitzungszeiten(BokehFigure):
     def setup_figure(self):
-        p = figure(title="Verteilung von Altersgruppen auf Sitzungszeiten", y_axis_label="Durchschnittsalter", x_range=self.data.get("date"))
-        print(self.data)
+        df = self.data["altersgruppe_sitzung_pro_tageszeit"].dataframe
+        p = figure(title="Verteilung von Altersgruppen auf Sitzungszeiten", y_axis_label="Durchschnittsalter", x_range=df.get("time"))
+        print(df.to_numpy())
         #p.quad(bottom=0, top=self.data[self.column_name], left=delays['left'], right=delays['right'], fill_color='red', line_color='black')
-
 
 
 CHART_COLLECTION = {
     "anzahl_neue_faelle_total": {
         "data_sources": {
-            "anzahl_neue_faelle_total": DBQuery(query="SELECT count(*) as cases FROM `case` WHERE created BETWEEN ? AND ?;",
+            "anzahl_neue_faelle_total": DBQuery(query="SELECT count(*) as cases FROM `case` WHERE created BETWEEN %(start_date)s AND %(end_date)s;",
                                                 required_parameters=("start_date", "end_date"))
         },
         "figure": AnzahlNeueFaelleProTag,
@@ -57,12 +55,13 @@ CHART_COLLECTION = {
     },
     "altersgruppe_sitzung_pro_tageszeit": {
         "data_sources": {
-            "altersgruppe_sitzung_pro_tageszeit": DBQuery(query="SELECT TIMESTAMPDIFF(YEAR, p.birthDate, CURDATE()) AS age FROM session AS s JOIN patient AS p ON s.patient = p.id WHERE s.created BETWEEN %(start_date)s AND %(end_date)s;",
-                                                          required_parameters=("start_date", "end_date"))
+            "altersgruppe_sitzung_pro_tageszeit": DBQuery(query="SELECT DATE_FORMAT(s.begin,'%H:%m:%S') AS date,TIMESTAMPDIFF(YEAR, p.birthDate, CURDATE()) AS age FROM session AS s JOIN patient AS p ON s.patient = p.id WHERE s.created BETWEEN %(start_date)s AND %(end_date)s;",
+                                                          required_parameters=("start_date", "end_date"),
+                                                          transformers=[
+                                                              ConvertToDateTypeTransformer(date_format="%H:%M:%S", date_column_name="date"),
+                                                              #ConvertToHistogramTransformer(column_name="age",bins=[0,10,18,40,65,85,120]),
+                                                              ])
         },
-        "figure": VerteilungAltersgruppenSitzungszeiten,
-        "transformers": [
-            ConvertToHistogramTransformer(column_name="age",bins=[0,10,18,40,65,85,120])
-        ]
+        "figure": VerteilungAltersgruppenSitzungszeiten
     }
 }

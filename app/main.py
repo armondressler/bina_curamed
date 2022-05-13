@@ -24,7 +24,7 @@ database_parameters = {
 
 queryparams = {"start_date": "2022-03-20", "end_date": "2022-03-28"}
 
-a = Chart("anzahl_neue_faelle_pro_tag", database_parameters=database_parameters, query_parameters=queryparams)
-#a = Chart("altersgruppe_sitzung_pro_tageszeit", database_parameters=database_parameters, query_parameters=queryparams)
+#a = Chart("anzahl_neue_faelle_pro_tag", database_parameters=database_parameters, query_parameters=queryparams)
+a = Chart("altersgruppe_sitzung_pro_tageszeit", database_parameters=database_parameters, query_parameters=queryparams)
 
 a.get_bokeh_json()

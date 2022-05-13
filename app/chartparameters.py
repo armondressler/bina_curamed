@@ -2,7 +2,7 @@ import logging
 from typing import List
 
 import mariadb
-import pandas
+import numpy as np
 import pandas as pd
 
 from exceptions import QueryResultTransformationError, ValidationError
@@ -48,9 +48,10 @@ class DBQuery:
 
     def transform_data(self):
         for transformer in self.transformers:
+            log.debug(f"Running transformer {self.__class__}")
             self.dataframe = transformer.transform(self.dataframe)
 
-    def _to_dataframe(self, data: list, columns: List[str]) -> pandas.DataFrame:
+    def _to_dataframe(self, data: list, columns: List[str]) -> pd.DataFrame:
         try:
             frame = pd.DataFrame(data, columns=columns)
         except ValueError as err:
@@ -92,18 +93,9 @@ class ConvertToDateTypeTransformer(DBQueryResultsTransformer):
         self.date_format = date_format
         self.date_column_name = date_column_name
 
-    def transform(self, data: list, columns: List[str]):
-        from datetime import datetime
-        try:
-            datecolumn_index = columns.index(self.date_column_name)
-        except ValueError:
-            raise QueryResultTransformationError(f"Column {self.date_column_name} missing in query result data (available: {', '.join(columns)})")   
-        transformed_data = []
-        row: tuple
-        for row in data:
-            new_row = row[:datecolumn_index],datetime.strptime(row[datecolumn_index], '%Y-%m-%d'),row[datecolumn_index:]
-            transformed_data.append(tuple(new_row))
-        return columns, transformed_data
+    def transform(self, dataframe: pd.DataFrame):
+        dataframe[self.date_column_name] = pd.to_datetime(dataframe[self.date_column_name], format=self.date_format)
+        return dataframe
 
 class ConvertToHistogramTransformer(DBQueryResultsTransformer):
     """Return distribution of pandas column column_name into bins with a new dataframe with columns count, left, right"""
@@ -111,10 +103,8 @@ class ConvertToHistogramTransformer(DBQueryResultsTransformer):
         self.column_name = column_name
         self.bins = bins
 
-    def transform(self, query_result):
-        import numpy as np
-        import pandas as pd
-        values, bins = np.histogram(query_result.get(self.column_name), bins=self.bins)
+    def transform(self, dataframe):
+        values, bins = np.histogram(dataframe.get(self.column_name), bins=self.bins)
         return pd.DataFrame({"count": values, "left": [b for b in bins[:-1]], "right": [b for b in bins[1:]]})
 
 class FillDateGapsTransformer(DBQueryResultsTransformer):
@@ -128,8 +118,6 @@ class FillDateGapsTransformer(DBQueryResultsTransformer):
         datecolumn = query_result.get(self.date_column_name)
         if datecolumn is None:
             raise QueryResultTransformationError(f"Column {self.date_column_name} missing in query result data (available: ???)")
-        print(datecolumn[0], type(datecolumn[0]))
-
         start_date = datecolumn[0]
         end_date = datecolumn[-1]
 
@@ -143,7 +131,6 @@ class FillDateGapsTransformer(DBQueryResultsTransformer):
 
         for i in range(delta.days + 1):
             day = start_date + timedelta(days=i)
-            print(f"i is {i}")
             if day in datecolumn:
                 continue
             datecolumn[i] = day
