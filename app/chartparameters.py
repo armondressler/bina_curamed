@@ -87,7 +87,6 @@ class Database:
             query.columns, query.data = columns, data
         conn.close()
 
-
 class ConvertToDateTypeTransformer(DBQueryResultsTransformer):
     def __init__(self, date_format="%Y-%m-%d", date_column_name="date"):
         self.date_format = date_format
