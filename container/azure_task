@@ -1,0 +1,9 @@
+az acr task create \
+    --registry $ACR_NAME \
+    --name djangobuild \
+    --image kete_hs21:{{.Run.ID}} \
+    --image kete_hs21:latest \
+    --context 'https://github.com/armondressler/kete_hs21.git#main' \
+    --file container/Dockerfile \
+    --git-access-token $GIT_PAT
+

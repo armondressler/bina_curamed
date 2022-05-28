@@ -1,4 +1,6 @@
 setuptools~=57.4.0
+fastapi
 mariadb
 bokeh
 pandas
+uvicorn

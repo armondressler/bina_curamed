@@ -1,15 +1,12 @@
-import enum
-from operator import index
 from typing import Dict
-from bokeh.plotting import figure, show, ColumnDataSource
-from bokeh.embed import json_item
-from bokeh.palettes import GnBu3
-from bokeh.palettes import Spectral6
-from bokeh.transform import linear_cmap
-
-from chartparameters import ConvertToHistogramTransformer, DBQuery, ConvertToDateTypeTransformer
 
 import numpy as np
+from bokeh.embed import json_item
+from bokeh.palettes import GnBu3, Spectral6
+from bokeh.plotting import ColumnDataSource, figure, show
+
+from chartparameters import ConvertToDateTypeTransformer, DBQuery
+
 
 class BokehFigure:
     def __init__(self, data: Dict[str, DBQuery]):
@@ -17,11 +14,11 @@ class BokehFigure:
         self.figure = self.setup_figure()
 
     def as_json(self):
-        #return json_item(self.figure)
-        pass
+        return json_item(self.figure)
 
     def setup_figure(self):
-        pass
+        return figure()
+        
 
 
 class AnzahlNeueFaelleProTag(BokehFigure):
@@ -42,10 +39,10 @@ class VerteilungAltersgruppenSitzungszeiten(BokehFigure):
         ageintervals = [f"{low} - {high}" for low,high in zip(yedges[:-1],yedges[1:])]
 
         TOOLTIPS = [
-            ("Zeitintervall", "$y"),
-            ("Anzahl Sitzungen", "@age"),
+            ("Altersgruppe", "@age"),
+            ("Anzahl Sitzungen", "@count"),
         ]
-        p = figure(title="Verteilung von Altersgruppen auf Sitzungszeiten", y_axis_label="Uhrzeit", x_axis_label="Anzahl Sitzungen", tooltips=TOOLTIPS, y_range=timeintervals)
+        p = figure(title="Verteilung von Altersgruppen auf Sitzungszeiten", y_axis_label="Uhrzeit", x_axis_label="Anzahl Sitzungen", tooltips=TOOLTIPS)
         p.ygrid.grid_line_color = None
         
         data = {}
@@ -53,14 +50,20 @@ class VerteilungAltersgruppenSitzungszeiten(BokehFigure):
             a = list(hist[timeindex])
             data["left"] = [0] + [sum(a[:index+1]) for index in range(len(a)-1)]    
             data["right"] = [sum(a[:index+1]) for index in range(len(a))]
+            data["count"] = a
             data["age"] = ageintervals
             color_slice = slice(0,len(ageintervals))
             data["color"] = Spectral6[color_slice]
             data["legend_label"] = ageintervals
-            data["y"] = [(name,index) for name,index in zip([timeinterval]*len(a),[timeindex]*len(a))]
+            data["y"] = [timeindex] * len(a)
+            p.yaxis.major_label_overrides[timeindex] = timeinterval
+            p.legend.title = 'Altersgruppen'
             print(data)
-            p.hbar(y="y", left="left", right="right", height=0.75, fill_color="color", source=ColumnDataSource(data), legend_field="legend_label")
-        show(p)
+            if timeindex == 0:
+                p.hbar(y="y", left="left", right="right", height=0.75, fill_color="color", source=ColumnDataSource(data), legend_group="legend_label")
+            else:
+                p.hbar(y="y", left="left", right="right", height=0.75, fill_color="color", source=ColumnDataSource(data))
+        return p
         
 
 

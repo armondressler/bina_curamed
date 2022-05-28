@@ -5,9 +5,9 @@
 
 import logging
 from typing import Dict, List
-from bokehfigures import CHART_COLLECTION, BokehFigure
 
-from chartparameters import DBQuery, Database
+from bokehfigures import CHART_COLLECTION, BokehFigure
+from chartparameters import Database, DBQuery
 from exceptions import ValidationError
 
 log = logging.getLogger()
