@@ -4,6 +4,8 @@ import sys
 from os import environ
 
 from fastapi import FastAPI
+from fastapi.responses import HTMLResponse
+
 import uvicorn
 
 from charts import Chart
@@ -44,10 +46,39 @@ async def list_charts():
 
 @app.get("/charts/{chart_id}")
 async def render_chart(*, chart_id: int):
-    return {"chart_id": chart_id}
+    import json
+    from bokeh.plotting import figure
+    from bokeh.embed import json_item
+    p = figure()
+    p.circle([1,2,3,4], [4,3,2,1])
+    return json_item(p)
 
+@app.get("/dashboard", response_class=HTMLResponse)
+async def dashboard():
+    from bokeh.resources import CDN
+    return """
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>""" + CDN.render() + """
+    </head>
+    <body>
+    <div id="myplot"></div>
+    <script>
+    async function run() {
+    const response = await fetch('/charts/1')
+    const item = await response.json()
+    Bokeh.embed.embed_item(item, "myplot")
+    }
+    run();
+    </script>
+    </body>
+    """
 
-
+"""
+    fetch('/charts/1')
+    .then(function(response) { return response.json(); })
+    .then(function(item) { return Bokeh.embed.embed_item(item, 'myplot'); })
+"""
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=args.port, log_level=args.log_level)
