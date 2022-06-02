@@ -3,17 +3,18 @@ import logging
 import sys
 from os import environ
 
+import uvicorn
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
 
-import uvicorn
-
-from charts import Chart
+from charts import CasesPerDay
+from datasources import Database
 
 __version__ = "1.0.0"
 
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
-log = logging.getLogger()
+
+
+app = FastAPI()
 
 parser = argparse.ArgumentParser(description='datawarehouse visualization service')
 parser.add_argument('--port', type=int, default=8080, help="run api on this port")
@@ -25,16 +26,16 @@ parser.add_argument('--db-port', type=int, default=int(environ.get("DB_PORT", 33
 parser.add_argument('--db-name', type=str, default=environ.get("DB_NAME","musterpraxis_dwh"), help="use this database on the dwh")
 args = parser.parse_args()
 
-database_parameters = {
-    "database": args.db_name,
-    "user": args.db_user,
-    "password": args.db_password,
-    "host": args.db_host,
-    "port": args.db_port}
+logging.basicConfig(stream=sys.stdout, level=logging.getLevelName(args.log_level.upper()))
+log = logging.getLogger()
+
+database_parameters = Database(user=args.db_user,
+                               password=args.db_password,
+                               host=args.db_host,
+                               port=args.db_port,
+                               database=args.db_name)
 
 queryparams = {"start_date": "2022-03-20", "end_date": "2022-03-28"}
-
-app = FastAPI()
 
 @app.get("/version")
 async def root():
@@ -45,16 +46,24 @@ async def list_charts():
     return []
 
 @app.get("/charts/{chart_id}")
-async def render_chart(*, chart_id: int):
-    import json
-    from bokeh.plotting import figure
+async def render_chart(*, chart_id: str):
+    """    from bokeh.plotting import figure
     from bokeh.embed import json_item
     p = figure()
-    p.circle([1,2,3,4], [4,3,2,1])
-    return json_item(p)
+    p.circle([1,2,3,4], [4,3,2,1])"""
+    p = CasesPerDay(database=database_parameters, query_parameters=queryparams)
+    return p.get_bokeh_json()
 
-@app.get("/dashboard", response_class=HTMLResponse)
-async def dashboard():
+@app.get("/dashboards")
+async def list_dashboards():
+    return []
+
+@app.get("/dashboards")
+async def dashboard(*, dashboard_id: str):
+    return []
+
+@app.get("/home", response_class=HTMLResponse)
+async def home():
     from bokeh.resources import CDN
     return """
     <!DOCTYPE html>
@@ -74,16 +83,5 @@ async def dashboard():
     </body>
     """
 
-"""
-    fetch('/charts/1')
-    .then(function(response) { return response.json(); })
-    .then(function(item) { return Bokeh.embed.embed_item(item, 'myplot'); })
-"""
-
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=args.port, log_level=args.log_level)
-
-#a = Chart("anzahl_neue_faelle_pro_tag", database_parameters=database_parameters, query_parameters=queryparams)
-#a = Chart("altersgruppe_sitzung_pro_tageszeit", database_parameters=database_parameters, query_parameters=queryparams)
-
-#a.get_bokeh_json()

@@ -1,47 +1,24 @@
-#class Chart:
-#Query (mit parametern wie z.B. Zeit von / bis)
-#Transformation query result zu columndatasource
-#Definition bokeh figure (glyphs, annotations etc) -> evtl direkt als funktion definieren
-
 import logging
 from typing import Dict, List
 
-from bokehfigures import CHART_COLLECTION, BokehFigure
-from chartparameters import Database, DBQuery
+from bokehfigures import (AnzahlNeueFaelleProTag, BokehFigure,
+                          VerteilungAltersgruppenSitzungszeiten)
+from datasources import Database, DBQuery
 from exceptions import ValidationError
+from transformers import ConvertToDateTypeTransformer
 
 log = logging.getLogger()
 
 class Chart:
-    collection = CHART_COLLECTION
-
-    def __init__(self, name: str, database_parameters: Dict[str, str], query_parameters: Dict[str, str]):
-        self.name = name
-        self.collection_item = self._get_collection_item()
-        self.database_parameters = database_parameters
-        self.database_queries = self._get_database_queries()
-        self.figure = self._get_figure()
+    def __init__(self, figure: type[BokehFigure], database: Database|None=None, db_queries: Dict[str, DBQuery]={}, query_parameters: Dict[str, str]={}):
+        self.figure = figure
+        self.database: Database|None = database
+        self.database_queries = db_queries
         self._parameterize_database_queries(query_parameters)
-
-    def _get_collection_item(self):
-        collection_item = Chart.collection.get(self.name)
-        if collection_item is None:
-            raise ValidationError(f"Chart collection does not contain a key {self.name}")
-        return collection_item
 
     def _parameterize_database_queries(self, parameters: dict):
         for _, query in self.database_queries.items():
             query.parameters = parameters
-
-    def _get_database_queries(self) -> Dict[str, DBQuery]:
-        dbqueries: Dict[str, DBQuery] = {}
-        for data_source_name, data_source in self.collection_item.get("data_sources", {}).items():
-            if isinstance(data_source, DBQuery):
-                dbqueries[data_source_name] = data_source
-        return dbqueries
-
-    def _get_figure(self) -> type[BokehFigure]:
-        return self.collection_item.get("figure")
         
     def _transform_query_result(self) -> None:
         for _, query in self.database_queries.items():
@@ -51,10 +28,37 @@ class Chart:
         queries: List[DBQuery] = []
         for _, query in self.database_queries.items():
             queries.append(query)
-        Database(**self.database_parameters).execute_queries(queries)
+        if queries:
+            if self.database is None:
+                raise ValidationError(f"Missing database parameters for chart")
+            else:
+                self.database.execute_queries(queries)
 
     def get_bokeh_json(self):
         self._update_datasources()
         self._transform_query_result()
-        self.figure
-        self.figure(data=self.database_queries)
+        return self.figure(data=self.database_queries).as_json()
+        
+
+class CasesTotal(Chart):
+    def __init__(self, database: Database, query_parameters: Dict[str, str] = {}):
+        database_queries = {"cases_total": DBQuery(query="SELECT count(*) as cases FROM `case` WHERE created BETWEEN %(start_date)s AND %(end_date)s;",
+                                          required_parameters=("start_date", "end_date"))}
+        super().__init__(AnzahlNeueFaelleProTag,
+                         database,
+                         database_queries,
+                         query_parameters)
+            
+class CasesPerDay(Chart):
+    def __init__(self, database: Database, query_parameters: Dict[str, str] = {}):
+        database_queries = {"cases_per_day": DBQuery(query="WITH recursive date_ranges AS (select %(start_date)s as date union all select date + interval 1 day from date_ranges where date < %(end_date)s) select date,COALESCE(cases, 0) as cases from date_ranges as a left join ( SELECT count(*) as cases,DATE_FORMAT(created,'%Y-%m-%d') as date2 FROM `case` WHERE created BETWEEN %(start_date)s AND %(end_date)s GROUP BY DATE_FORMAT(created,'%Y-%m-%d')) as b  on a.date = b.date2;", 
+                                                  required_parameters=("start_date", "end_date"))}
+        super().__init__(AnzahlNeueFaelleProTag, database, database_queries, query_parameters)
+
+
+class AgeGroupBySessionTime(Chart):
+    def __init__(self, database: Database, query_parameters: Dict[str, str] = {}):
+        database_queries = {"age_group_by_session_time": DBQuery(query="SELECT DATE_FORMAT(s.begin,'%H:%m:%S') AS date,TIMESTAMPDIFF(YEAR, p.birthDate, CURDATE()) AS age FROM session AS s JOIN patient AS p ON s.patient = p.id WHERE s.created BETWEEN %(start_date)s AND %(end_date)s;",
+        required_parameters=("start_date", "end_date"),
+        transformers=[ConvertToDateTypeTransformer(date_format="%H:%M:%S", date_column_name="date")])}
+        super().__init__(VerteilungAltersgruppenSitzungszeiten, database, database_queries, query_parameters)
