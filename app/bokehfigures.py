@@ -27,7 +27,10 @@ class AnzahlNeueFaelleProTag(BokehFigure):
         tooltips = [
             ("Anzahl Fälle", "@top"),
         ]
-        p = figure(title="Neue Fälle pro Tag", y_axis_label="Neue Fälle", x_range=df.get("date"), tooltips=tooltips)
+        p = figure(title="Neue Fälle pro Tag",
+                   y_axis_label="Neue Fälle",
+                   x_range=df.get("date"),
+                   tooltips=tooltips)
         p.vbar(x=df.get("date"), top=df.get("cases"), color="green", width=0.8)
         p.yaxis.minor_tick_out = 0
         return p

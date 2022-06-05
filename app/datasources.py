@@ -70,6 +70,9 @@ class Database:
         except mariadb.Error as err:
             log.error(f"Failed to connect to database: {err}")
             raise
+        except mariadb.ProgrammingError as err:
+            log.error(f"Failed after connection: {err}")
+            raise
         cur = conn.cursor()
         for query in queries:
             log.debug(f"Running query: \"{query.query}\" with parameters {query.parameters}")
