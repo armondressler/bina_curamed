@@ -17,9 +17,20 @@ class ConvertToDateTypeTransformer(DBQueryResultsTransformer):
         self.date_format = date_format
         self.date_column_name = date_column_name
 
-    def transform(self, dataframe: pd.DataFrame):
+    def transform(self, dataframe: pd.DataFrame) -> pd.DataFrame:
         dataframe[self.date_column_name] = pd.to_datetime(dataframe[self.date_column_name], format=self.date_format)
         return dataframe
+
+class RoundFloatTypeTransformer(DBQueryResultsTransformer):
+    def __init__(self, float_column_name, digit_count=2) -> None:
+        self.float_column_name=float_column_name
+        self.digit_count = digit_count
+    
+    def transform(self, dataframe: pd.DataFrame) -> pd.DataFrame:
+        print(dataframe[self.float_column_name].max())
+        dataframe[self.float_column_name] = dataframe[self.float_column_name].round(decimals=self.digit_count)
+        print(dataframe[self.float_column_name].max())
+        return dataframe        
 
 class ConvertToHistogramTransformer(DBQueryResultsTransformer):
     """Return distribution of pandas column column_name into bins with a new dataframe with columns count, left, right"""
@@ -27,7 +38,7 @@ class ConvertToHistogramTransformer(DBQueryResultsTransformer):
         self.column_name = column_name
         self.bins = bins
 
-    def transform(self, dataframe):
+    def transform(self, dataframe) -> pd.DataFrame:
         values, bins = np.histogram(dataframe.get(self.column_name), bins=self.bins)
         return pd.DataFrame({"count": values, "left": [b for b in bins[:-1]], "right": [b for b in bins[1:]]})
 

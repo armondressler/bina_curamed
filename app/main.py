@@ -5,10 +5,10 @@ from os import environ
 import datetime
 
 import uvicorn
-from fastapi import FastAPI, Path, Query
+from fastapi import FastAPI, HTTPException, Path, Query
 from fastapi.responses import HTMLResponse
 
-from charts import CasesPerDay
+from charts import CasesPerDay, TurnoverPerMonth
 from datasources import Database
 
 __version__ = "1.0.0"
@@ -50,13 +50,18 @@ async def render_chart(*,
                        end_date: datetime.date):
 
     database_name = customer + args.db_suffix if args.db_suffix else customer
-    database_parameters = Database(user=args.db_user,
-                               password=args.db_password,
-                               host=args.db_host,
-                               port=args.db_port,
-                               database=database_name)
+    database = Database(user=args.db_user,
+                        password=args.db_password,
+                        host=args.db_host,
+                        port=args.db_port,
+                        database=database_name)
     query_parameters={"start_date": str(start_date), "end_date": str(end_date)}
-    p = CasesPerDay(database=database_parameters, query_parameters=query_parameters)
+    if chart_id == "cases-per-day":
+        p = CasesPerDay(database=database, query_parameters=query_parameters)
+    elif chart_id == "turnover-per-month":
+        p = TurnoverPerMonth(database=database, query_parameters=query_parameters)
+    else:
+        raise HTTPException(status_code=404, detail="Chart not found")
     return p.get_bokeh_json()
 
 @app.get("/dashboards")
@@ -79,7 +84,7 @@ async def home():
     <div id="myplot"></div>
     <script>
     async function run() {
-    const response = await fetch('/charts/fubar?customer=musterpraxis&start_date=2022-03-01&end_date=2022-03-31')
+    const response = await fetch('/charts/turnover-per-month?customer=musterpraxis&start_date=2021-09-01&end_date=2022-03-31')
     const item = await response.json()
     Bokeh.embed.embed_item(item, "myplot")
     }

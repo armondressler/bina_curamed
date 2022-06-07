@@ -1,9 +1,11 @@
 from typing import Dict
 
 import numpy as np
+import pandas as pd
 from bokeh.embed import json_item
 from bokeh.palettes import Spectral6
 from bokeh.plotting import ColumnDataSource, figure
+from bokeh.models import HoverTool
 
 from datasources import DBQuery
 
@@ -18,7 +20,6 @@ class BokehFigure:
 
     def setup_figure(self):
         return figure()
-        
 
 
 class AnzahlNeueFaelleProTag(BokehFigure):
@@ -27,11 +28,12 @@ class AnzahlNeueFaelleProTag(BokehFigure):
         tooltips = [
             ("Anzahl Fälle", "@top"),
         ]
+        print(df.shape)
         p = figure(title="Neue Fälle pro Tag",
                    y_axis_label="Neue Fälle",
-                   x_range=df.get("date"),
-                   tooltips=tooltips)
-        p.vbar(x=df.get("date"), top=df.get("cases"), color="green", width=0.8)
+                   tooltips=tooltips,
+                   x_axis_type="datetime")
+        p.vbar(x=df.get("date"), top=df.get("cases"), color="green", width=64_000_000)
         p.yaxis.minor_tick_out = 0
         return p
 
@@ -68,4 +70,19 @@ class VerteilungAltersgruppenSitzungszeiten(BokehFigure):
                 p.hbar(y="y", left="left", right="right", height=0.75, fill_color="color", source=ColumnDataSource(data), legend_group="legend_label")
             else:
                 p.hbar(y="y", left="left", right="right", height=0.75, fill_color="color", source=ColumnDataSource(data))
+        return p
+
+class TurnoverPerMonthFigure(BokehFigure):
+    def setup_figure(self):
+        daily_turnover_summary = self.data["turnover_per_day"].dataframe
+        print(self.data["turnover_by_invstat"].dataframe.to_dict())
+        monthly_turnover_summary = daily_turnover_summary.groupby(daily_turnover_summary.date.dt.to_period('M'))['SumCalcAmtTotal'].sum()
+        hover = HoverTool(names=["monthly_turnover_vbar"], tooltips=[("Umsatz in SFr", "@top{0.00}")])
+        p = figure(title="Umsatz pro Monat",
+                   y_axis_label="Umsatz in SFr",
+                   x_axis_type="datetime",
+                   tools=['pan', 'box_zoom', 'wheel_zoom', 'save','reset', hover])
+        p.vbar(x=monthly_turnover_summary.index, top=monthly_turnover_summary, name="monthly_turnover_vbar", color="green", width=64_000_000 * 30, fill_alpha=0.5)
+        p.line(daily_turnover_summary.get("date"), daily_turnover_summary.get("SumCalcAmtTotal"))
+        p.yaxis.minor_tick_out = 0
         return p
