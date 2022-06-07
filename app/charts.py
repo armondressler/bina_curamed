@@ -5,7 +5,7 @@ from bokehfigures import (AnzahlNeueFaelleProTag, BokehFigure, TurnoverPerMonthF
                           VerteilungAltersgruppenSitzungszeiten)
 from datasources import Database, DBQuery
 from exceptions import ValidationError
-from transformers import ConvertToDateTypeTransformer, RoundFloatTypeTransformer
+from transformers import ConvertToDateTypeTransformer, FillDateGapsTransformer, RoundFloatTypeTransformer
 
 log = logging.getLogger()
 
@@ -73,9 +73,9 @@ class TurnoverPerMonth(Chart):
                                                         required_parameters=("start_date", "end_date"),
                                                         transformers=[ConvertToDateTypeTransformer(date_column_name="date"),
                                                                       RoundFloatTypeTransformer("SumCalcAmtTotal", digit_count=2)]),
-                            "turnover_by_invstat": DBQuery(query="SELECT DATE_FORMAT(created,'%Y-%m-%d') AS date, calcAmtTotal, invStat FROM invoice WHERE (created BETWEEN %(start_date)s AND %(end_date)s) AND (traStat = 'transferred' OR trastat = 'dispatched') GROUP BY DATE_FORMAT(created,'%Y-%m-%d');",
+                            "turnover_by_executing_doctor": DBQuery(query="SELECT DATE_FORMAT(`date`,'%Y-%m-%d') AS date,SUM(totalAmount) AS SumTotalAmount,SUM(totalTar) AS SumTotalTar,SUM(totalTar2) AS SumTotalTar2,SUM(totalMedication) as SumTotalMedication,SUM(totalMigel) AS SumTotalMigel,SUM(totalAnalysis) AS SumTotalAnalysis,SUM(totalPhysio) AS SumTotalPhysio, SUM(totalMisc) AS SumTotalMisc,SUM(totalOther) AS SumTotalOther,s.executingDoctor,CONCAT(IFNULL(p.firstName, ''), ' ', IFNULL(p.lastName,'')) AS combinedName FROM invoicePart AS invp JOIN session AS s ON invp.session = s.id JOIN personnel AS p ON s.executingDoctor = p.id JOIN invoice AS inv ON invp.invoice = inv.id WHERE (invp.invoice != 'aaaaaaaaaaaaaaaaaaaa') AND (inv.created BETWEEN %(start_date)s AND %(end_date)s) GROUP BY DATE_FORMAT(`date`,'%Y-%m-%d'),executingDoctor;",
                                                            required_parameters=("start_date", "end_date"),
                                                            transformers=[ConvertToDateTypeTransformer(date_column_name="date"),
-                                                                         RoundFloatTypeTransformer("calcAmtTotal", digit_count=2)])}
+                                                                         FillDateGapsTransformer(date_column_name="date")])}
         super().__init__(TurnoverPerMonthFigure, database, database_queries, query_parameters)
 

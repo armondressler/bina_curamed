@@ -72,10 +72,19 @@ class VerteilungAltersgruppenSitzungszeiten(BokehFigure):
                 p.hbar(y="y", left="left", right="right", height=0.75, fill_color="color", source=ColumnDataSource(data))
         return p
 
+#TODO Nur invoices mit invStat paid sollten als Umsatz gezählt werden, mangels Daten in musterpraxis vorerst weggelassen -> where invStat = "paid";
+#TODO combinedName ungünstiger Schlüssel bei gleichnamigen Dr... -> executingDoctor verwenden?
 class TurnoverPerMonthFigure(BokehFigure):
     def setup_figure(self):
-        daily_turnover_summary = self.data["turnover_per_day"].dataframe
-        print(self.data["turnover_by_invstat"].dataframe.to_dict())
+        from bokeh.palettes import brewer
+        turnover_by_executing_doctor = self.data["turnover_by_executing_doctor"].dataframe
+        executing_doctors = turnover_by_executing_doctor["combinedName"].drop_duplicates().dropna()
+        df_split_by_personnel = pd.DataFrame()
+        df_split_by_personnel["date"] = turnover_by_executing_doctor["date"].drop_duplicates()
+        for combinedName in executing_doctors:
+            df_split_by_personnel[combinedName] = pd.merge(df_split_by_personnel, turnover_by_executing_doctor[turnover_by_executing_doctor["combinedName"] == combinedName], on="date", how="outer")["SumTotalAmount"].fillna(0)
+
+        """ daily_turnover_summary = self.data["turnover_per_day"].dataframe
         monthly_turnover_summary = daily_turnover_summary.groupby(daily_turnover_summary.date.dt.to_period('M'))['SumCalcAmtTotal'].sum()
         hover = HoverTool(names=["monthly_turnover_vbar"], tooltips=[("Umsatz in SFr", "@top{0.00}")])
         p = figure(title="Umsatz pro Monat",
@@ -84,5 +93,14 @@ class TurnoverPerMonthFigure(BokehFigure):
                    tools=['pan', 'box_zoom', 'wheel_zoom', 'save','reset', hover])
         p.vbar(x=monthly_turnover_summary.index, top=monthly_turnover_summary, name="monthly_turnover_vbar", color="green", width=64_000_000 * 30, fill_alpha=0.5)
         p.line(daily_turnover_summary.get("date"), daily_turnover_summary.get("SumCalcAmtTotal"))
-        p.yaxis.minor_tick_out = 0
+        p.yaxis.minor_tick_out = 0 """
+        print(df_split_by_personnel.columns)
+        hover = HoverTool(names=[c for c in executing_doctors], tooltips=[('Datum', '@date{%F}'),("Name","$name"),("Umsatz","@$name SFr")], formatters={'@date': 'datetime'})
+        p = figure(title="Umsatz pro Arzt",x_axis_type="datetime", tools=['pan', 'box_zoom', 'wheel_zoom', 'save','reset', hover])
+        p.varea_stack([c for c in executing_doctors],
+                      x='date',
+                      color=brewer['Spectral'][executing_doctors.count()],
+                      legend_label=[c for c in executing_doctors],
+                      name=[c for c in executing_doctors],
+                      source=df_split_by_personnel)
         return p

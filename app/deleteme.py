@@ -6,16 +6,21 @@ from bokeh.plotting import ColumnDataSource, figure, show
 from bokeh.models import HoverTool
 
 
-a = {'date': {0: Timestamp('2021-11-24 00:00:00'), 1: Timestamp('2021-11-24 00:00:00'), 2: Timestamp('2022-02-20 00:00:00'), 3: Timestamp('2022-02-20 00:00:00'), 4: Timestamp('2022-02-20 00:00:00'), 5: Timestamp('2022-03-30 00:00:00')}, 'calcAmtTotal': {0: 66.65, 1: 7.3, 2: 333.2, 3: 83.0, 4: 94.15, 5: 85.9}, 'invStat': {0: 'paid', 1: 'paid', 2: 'open', 3: 'paid', 4: 'open', 5: 'paid'}}
+from bokeh.io import curdoc
+from bokeh.plotting import figure
+from bokeh.models import ColumnDataSource
 
-df = pd.DataFrame.from_dict(a)
-df["paid"] = df[df["invStat"] == "paid"]
-df["open"] = df[df["invStat"] == "open"]
+ds = ColumnDataSource(data=dict(
+    x=[1,2,3,4,5],
+    y=[1,3,2,4,3],
+    y2=[3,5,4,6,5],
+    desc=['A','b','C','d','E'],
+))
 
-from bokeh.palettes import brewer
-N=2
-p = figure(x_range=(0, len(df)-1), y_range=(0, 800))
-p.grid.minor_grid_line_color = '#eeeeee'
+p = figure(width=400, height=400, tooltips=[('index', '@y2')], title="Data xTreme")
 
-p.varea_stack(["paid","open"], x='date', color=("grey", "lightgrey"), source=df)
-#show(p)
+p.varea('x','y','y2',source=ds)
+
+show(p)
+
+
