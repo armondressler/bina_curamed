@@ -14,3 +14,12 @@ Praxisspiegel (Management Summary)
 - http://www.zueridoc.ch/dienstleistungen/praxisspiegel-1qlik/
   
   
+TODO:
+- decent URL schema
+  - GET /dashboards/business_overview
+  - GET /dashboards/another_overview > 301 > /dashboards/another_overview?start_date=30daysago&end_date=today
+  - 
+- input validation for parameters (e.g. start_date/end_date iso 8601)
+- default parameters? redirect to /x?start_date=30daysago&end_date=today
+- cache (-> mark requests for past timeranges as cacheable?)
+- any useful POST/PUT/DELETE?
