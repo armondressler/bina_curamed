@@ -1,3 +1,4 @@
+from calendar import month
 from typing import Dict
 
 import numpy as np
@@ -33,7 +34,10 @@ class AnzahlNeueFaelleProTag(BokehFigure):
                    y_axis_label="Neue Fälle",
                    tooltips=tooltips,
                    x_axis_type="datetime")
-        p.vbar(x=df.get("date"), top=df.get("cases"), color="green", width=64_000_000)
+        p.vbar(x=df.get("date"),
+               top=df.get("cases"),
+               color="green",
+               width=64_000_000)
         p.yaxis.minor_tick_out = 0
         return p
 
@@ -65,7 +69,6 @@ class VerteilungAltersgruppenSitzungszeiten(BokehFigure):
             data["y"] = [timeindex] * len(a)
             p.yaxis.major_label_overrides[timeindex] = timeinterval
             p.legend.title = 'Altersgruppen'
-            print(data)
             if timeindex == 0:
                 p.hbar(y="y", left="left", right="right", height=0.75, fill_color="color", source=ColumnDataSource(data), legend_group="legend_label")
             else:
@@ -79,28 +82,37 @@ class TurnoverPerMonthFigure(BokehFigure):
         from bokeh.palettes import brewer
         turnover_by_executing_doctor = self.data["turnover_by_executing_doctor"].dataframe
         executing_doctors = turnover_by_executing_doctor["combinedName"].drop_duplicates().dropna()
+        executing_doctors = list(executing_doctors)
         df_split_by_personnel = pd.DataFrame()
         df_split_by_personnel["date"] = turnover_by_executing_doctor["date"].drop_duplicates()
         for combinedName in executing_doctors:
             df_split_by_personnel[combinedName] = pd.merge(df_split_by_personnel, turnover_by_executing_doctor[turnover_by_executing_doctor["combinedName"] == combinedName], on="date", how="outer")["SumTotalAmount"].fillna(0)
 
-        """ daily_turnover_summary = self.data["turnover_per_day"].dataframe
-        monthly_turnover_summary = daily_turnover_summary.groupby(daily_turnover_summary.date.dt.to_period('M'))['SumCalcAmtTotal'].sum()
-        hover = HoverTool(names=["monthly_turnover_vbar"], tooltips=[("Umsatz in SFr", "@top{0.00}")])
-        p = figure(title="Umsatz pro Monat",
+        #dataframe formatting, sum daily sums by month, index by month, columns for doctors names, values are turnover
+        monthly_turnover_summary = turnover_by_executing_doctor.groupby([turnover_by_executing_doctor.date.dt.to_period('M'),"combinedName"], as_index=True).sum().reset_index()
+        monthly_turnover_summary = monthly_turnover_summary.pivot(index="date", columns="combinedName", values="SumTotalAmount").fillna(0)
+        monthly_turnover_summary.index =  monthly_turnover_summary.index.start_time + pd.offsets.SemiMonthEnd() #ensure monthly vbar is centered in the month, not at the start
+        
+
+        hover = HoverTool(names=executing_doctors, tooltips=[('Datum', '@date{%F}'),("Name","$name"),("Umsatz","@$name SFr")], formatters={'@date': 'datetime'})
+        p = figure(title="Umsatz pro Arzt",
                    y_axis_label="Umsatz in SFr",
                    x_axis_type="datetime",
                    tools=['pan', 'box_zoom', 'wheel_zoom', 'save','reset', hover])
-        p.vbar(x=monthly_turnover_summary.index, top=monthly_turnover_summary, name="monthly_turnover_vbar", color="green", width=64_000_000 * 30, fill_alpha=0.5)
-        p.line(daily_turnover_summary.get("date"), daily_turnover_summary.get("SumCalcAmtTotal"))
-        p.yaxis.minor_tick_out = 0 """
-        print(df_split_by_personnel.columns)
-        hover = HoverTool(names=[c for c in executing_doctors], tooltips=[('Datum', '@date{%F}'),("Name","$name"),("Umsatz","@$name SFr")], formatters={'@date': 'datetime'})
-        p = figure(title="Umsatz pro Arzt",x_axis_type="datetime", tools=['pan', 'box_zoom', 'wheel_zoom', 'save','reset', hover])
-        p.varea_stack([c for c in executing_doctors],
+        
+        p.vbar_stack(executing_doctors,
+                     x="date",
+                     color=brewer['Spectral'][len(executing_doctors)],
+                     fill_alpha=0.35,
+                     width=64_000_000 * 30,
+                     name=executing_doctors, 
+                     line_width=1,
+                     source=monthly_turnover_summary)
+
+        p.varea_stack(executing_doctors,
                       x='date',
-                      color=brewer['Spectral'][executing_doctors.count()],
-                      legend_label=[c for c in executing_doctors],
-                      name=[c for c in executing_doctors],
+                      color=brewer['Spectral'][len(executing_doctors)],
+                      legend_label=executing_doctors,
+                      name=executing_doctors,
                       source=df_split_by_personnel)
         return p
