@@ -1,13 +1,14 @@
 import logging
 from typing import Dict, List
 
-from h11 import Data
-
-from bokehfigures import (AnzahlNeueFaelleProTag, BenefitsByInvoiceStatusPerDayFigure, BokehFigure, TurnoverByServiceTypeFigure, TurnoverPerMonthFigure,
+from bokehfigures import (AnzahlNeueFaelleProTag,
+                          BenefitsByInvoiceStatusPerDayFigure, BokehFigure,
+                          TurnoverByServiceTypeFigure, TurnoverPerMonthFigure,
                           VerteilungAltersgruppenSitzungszeiten)
 from datasources import Database, DBQuery
 from exceptions import ValidationError
-from transformers import ConvertToDateTypeTransformer, FillDateGapsTransformer, RoundFloatTypeTransformer
+from transformers import (ConvertToDateTypeTransformer,
+                          FillDateGapsTransformer, RoundFloatTypeTransformer)
 
 log = logging.getLogger()
 

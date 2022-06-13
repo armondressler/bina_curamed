@@ -29,7 +29,6 @@ class AnzahlNeueFaelleProTag(BokehFigure):
         tooltips = [
             ("Anzahl Fälle", "@top"),
         ]
-        print(df.shape)
         p = figure(title="Neue Fälle pro Tag",
                    y_axis_label="Neue Fälle",
                    tooltips=tooltips,

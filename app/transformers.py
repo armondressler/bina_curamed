@@ -27,9 +27,7 @@ class RoundFloatTypeTransformer(DBQueryResultsTransformer):
         self.digit_count = digit_count
     
     def transform(self, dataframe: pd.DataFrame) -> pd.DataFrame:
-        print(dataframe[self.float_column_name].max())
         dataframe[self.float_column_name] = dataframe[self.float_column_name].round(decimals=self.digit_count)
-        print(dataframe[self.float_column_name].max())
         return dataframe        
 
 class ConvertToHistogramTransformer(DBQueryResultsTransformer):

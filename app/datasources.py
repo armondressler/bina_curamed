@@ -1,7 +1,7 @@
 import logging
 from typing import List
 
-import mariadb
+import mysql.connector
 import pandas as pd
 
 from exceptions import QueryResultTransformationError, ValidationError
@@ -62,17 +62,15 @@ class Database:
 
     def execute_queries(self, queries: List[DBQuery]) -> None:
         try:
-            conn = mariadb.connect(user=self.user,
+            conn = mysql.connector.connect(user=self.user,
                                    password=self.password,
                                    host=self.host,
                                    port=self.port,
                                    database=self.database)
-        except mariadb.Error as err:
-            log.error(f"Failed to connect to database: {err}")
+        except mysql.connector.Error as err:
+            log.error(f"database error: {err}")
             raise
-        except mariadb.ProgrammingError as err:
-            log.error(f"Failed after connection: {err}")
-            raise
+
         cur = conn.cursor()
         for query in queries:
             log.debug(f"Running query: \"{query.query}\" with parameters {query.parameters}")
