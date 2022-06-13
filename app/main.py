@@ -1,16 +1,16 @@
 import argparse
+import datetime
 import logging
 import sys
 from os import environ
-import datetime
 
 import uvicorn
 from fastapi import FastAPI, HTTPException, Path, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 
-
-from charts import BenefitsByInvoiceStatusPerDay, CasesPerDay, TurnoverByServiceType, TurnoverPerMonth
+from charts import (BenefitsByInvoiceStatusPerDay, CasesPerDay,
+                    TurnoverByServiceType, TurnoverPerMonth)
 from datasources import Database
 
 __version__ = "1.0.0"
