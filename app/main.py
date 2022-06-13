@@ -20,7 +20,7 @@ app = FastAPI()
 templates = Jinja2Templates(directory="data/dashboards")
 
 parser = argparse.ArgumentParser(description='datawarehouse visualization service')
-parser.add_argument('--port', type=int, default=8080, help="run api on this port")
+parser.add_argument('--port', type=int, default=int(environ.get("APP_PORT", 8080)), help="run api on this port")
 parser.add_argument('--log-level', type=str, default="info", help="api log level", choices=["error","info","debug"])
 parser.add_argument('--db-user', type=str, default=environ.get("DB_USER","musterpraxis_dwh"), help='use this user to connect to the dwh')
 parser.add_argument('--db-password', type=str, default=environ.get("DB_PASSWORD", "password"), help='use this password to connect to dwh')
