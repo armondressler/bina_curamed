@@ -4,9 +4,9 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 from bokeh.embed import json_item
-from bokeh.palettes import Spectral6
-from bokeh.plotting import ColumnDataSource, figure
 from bokeh.models import HoverTool
+from bokeh.palettes import Spectral6, brewer
+from bokeh.plotting import ColumnDataSource, figure
 
 from datasources import DBQuery
 
@@ -79,7 +79,6 @@ class VerteilungAltersgruppenSitzungszeiten(BokehFigure):
 #TODO combinedName ungünstiger Schlüssel bei gleichnamigen Dr... -> executingDoctor verwenden?
 class TurnoverPerMonthFigure(BokehFigure):
     def setup_figure(self):
-        from bokeh.palettes import brewer
         turnover_by_executing_doctor = self.data["turnover_by_executing_doctor"].dataframe
         executing_doctors = turnover_by_executing_doctor["combinedName"].drop_duplicates().dropna()
         executing_doctors = list(executing_doctors)
@@ -116,3 +115,63 @@ class TurnoverPerMonthFigure(BokehFigure):
                       name=executing_doctors,
                       source=df_split_by_personnel)
         return p
+
+
+class BenefitsByInvoiceStatusPerDayFigure(BokehFigure):
+    def setup_figure(self):
+        df = self.data["benefits_by_invoice_status"].dataframe
+        benefits_by_invoice_status_per_day = df.groupby([df.date.dt.to_period('D'),"invStat"], as_index=True).sum().reset_index()
+        benefits_by_invoice_status_per_day = benefits_by_invoice_status_per_day.pivot(index="date", columns="invStat", values="effCalcAmtVat").fillna(0)
+
+        #dataframe formatting, sum daily sums by month, index by month, columns for invoice states, values are benefits
+        monthly_benefits_by_invoice_status_summary = df.groupby([df.date.dt.to_period('M'),"invStat"], as_index=True).sum().reset_index()
+        monthly_benefits_by_invoice_status_summary = monthly_benefits_by_invoice_status_summary.pivot(index="date", columns="invStat", values="effCalcAmtVat").fillna(0)
+        print(monthly_benefits_by_invoice_status_summary)
+        monthly_benefits_by_invoice_status_summary.index =  monthly_benefits_by_invoice_status_summary.index.start_time + pd.offsets.SemiMonthEnd() 
+
+        for missing_required_column in {"open", "paid", "cancelled"}.difference(benefits_by_invoice_status_per_day.columns):
+            benefits_by_invoice_status_per_day[missing_required_column] = 0.0
+            monthly_benefits_by_invoice_status_summary[missing_required_column] = 0.0
+        
+        invoice_states_translation = {"open":"Offen",
+                                      "paid":"Bezahlt",
+                                      "cancelled": "Storniert",
+                                      "reminder_1": "erste Mahnung",
+                                      "reminder_2": "zweite Mahnung",
+                                      "reminder_3": "dritte Mahnung",
+                                      "reminder_last": "letzte Mahnung",
+                                      "collection_active": "Inkasso",
+                                      "booked_out": "Ausgebucht"}
+
+        benefits_by_invoice_status_per_day.rename(columns=invoice_states_translation, inplace=True)
+        monthly_benefits_by_invoice_status_summary.rename(columns=invoice_states_translation, inplace=True)
+        
+        invoice_states = [state for state in benefits_by_invoice_status_per_day.columns]
+
+
+        hover = HoverTool(names=invoice_states, tooltips=[('Datum', '@date{%F}'),("Name","$name"),("Leistung","@$name SFr")], formatters={'@date': 'datetime'})
+        p = figure(title="Leistungen nach Rechnungsstand",
+            y_axis_label="Umsatz in SFr",
+            x_axis_type="datetime",
+            tools=['pan', 'box_zoom', 'wheel_zoom', 'save','reset', hover])
+
+        p.vbar_stack(invoice_states,
+                     x="date",
+                     color=brewer['Spectral'][len(invoice_states)],
+                     fill_alpha=0.35,
+                     width=64_000_000 * 30,
+                     name=invoice_states, 
+                     line_width=1,
+                     source=monthly_benefits_by_invoice_status_summary)
+
+        p.varea_stack(invoice_states,
+                      x="date",
+                      color=brewer['Spectral'][len(invoice_states)],
+                      legend_label=invoice_states,
+                      name=invoice_states,
+                      source=benefits_by_invoice_status_per_day)
+
+        return p
+
+
+    

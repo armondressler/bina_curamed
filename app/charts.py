@@ -1,7 +1,7 @@
 import logging
 from typing import Dict, List
 
-from bokehfigures import (AnzahlNeueFaelleProTag, BokehFigure, TurnoverPerMonthFigure,
+from bokehfigures import (AnzahlNeueFaelleProTag, BenefitsByInvoiceStatusPerDayFigure, BokehFigure, TurnoverPerMonthFigure,
                           VerteilungAltersgruppenSitzungszeiten)
 from datasources import Database, DBQuery
 from exceptions import ValidationError
@@ -79,3 +79,10 @@ class TurnoverPerMonth(Chart):
                                                                          FillDateGapsTransformer(date_column_name="date")])}
         super().__init__(TurnoverPerMonthFigure, database, database_queries, query_parameters)
 
+class BenefitsByInvoiceStatusPerDay(Chart):
+    def __init__(self, database: Database, query_parameters: Dict[str, str] = {}):
+        database_queries = {"benefits_by_invoice_status": DBQuery(query="SELECT DATE_FORMAT(bc.created,'%Y-%m-%d') AS date, bc.effCalcAmtVat, inv.invStat FROM benefitCombined AS bc JOIN invoice AS inv ON bc.invoice = inv.id WHERE bc.invoice != 'aaaaaaaaaaaaaaaaaaaa' AND (inv.traStat = 'transferred' OR inv.traStat = 'dispatched') AND bc.created BETWEEN %(start_date)s AND %(end_date)s;",
+                                                                  required_parameters=("start_date", "end_date"),
+                                                                  transformers=[ConvertToDateTypeTransformer(date_column_name="date"),
+                                                                                FillDateGapsTransformer(date_column_name="date",nan_fill={"effCalcAmtVat": 0, "invStat": "paid"})])}
+        super().__init__(BenefitsByInvoiceStatusPerDayFigure, database, database_queries, query_parameters)
