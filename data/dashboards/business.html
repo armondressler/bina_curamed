@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-2.4.3.min.js"></script>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-gl-2.4.3.min.js"></script>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.4.3.min.js"></script>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-tables-2.4.3.min.js"></script>
+    <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-mathjax-2.4.3.min.js"></script>
+    <script type="text/javascript">
+        Bokeh.set_log_level("info");
+    </script>
+</head>
+<body>
+    <div id="cases-per-day"></div>
+    <div id="turnover-per-month"></div>
+    <div id="benefits-by-invoice-status"></div>
+    <div id="turnover-by-service-type"></div>
+    <div id=""></div>
+    <script>
+        async function render_chart(chart_id) {    
+            const response = await fetch("/charts/" + chart_id + "?customer=musterpraxis&start_date=2021-09-01&end_date=2022-04-30")
+            const chart_json = await response.json()
+            Bokeh.embed.embed_item(chart_json, chart_id)
+        }
+        
+        const charts = ["cases-per-day", "turnover-per-month", "benefits-by-invoice-status", "turnover-by-service-type"]
+        charts.forEach((chart_id, index) => {
+            render_chart(chart_id);
+        });
+    </script>
+</body>

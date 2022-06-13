@@ -5,15 +5,19 @@ from os import environ
 import datetime
 
 import uvicorn
-from fastapi import FastAPI, HTTPException, Path, Query
+from fastapi import FastAPI, HTTPException, Path, Query, Request
 from fastapi.responses import HTMLResponse
+from fastapi.templating import Jinja2Templates
 
-from charts import BenefitsByInvoiceStatusPerDay, CasesPerDay, TurnoverPerMonth
+
+from charts import BenefitsByInvoiceStatusPerDay, CasesPerDay, TurnoverByServiceType, TurnoverPerMonth
 from datasources import Database
 
 __version__ = "1.0.0"
 
 app = FastAPI()
+
+templates = Jinja2Templates(directory="data/dashboards")
 
 parser = argparse.ArgumentParser(description='datawarehouse visualization service')
 parser.add_argument('--port', type=int, default=8080, help="run api on this port")
@@ -62,6 +66,8 @@ async def render_chart(*,
         p = TurnoverPerMonth(database=database, query_parameters=query_parameters)
     elif chart_id == "benefits-by-invoice-status":
         p = BenefitsByInvoiceStatusPerDay(database=database, query_parameters=query_parameters)
+    elif chart_id == "turnover-by-service-type":
+        p = TurnoverByServiceType(database=database, query_parameters=query_parameters)
     else:
         raise HTTPException(status_code=404, detail="Chart not found")
     return p.get_bokeh_json()
@@ -70,9 +76,11 @@ async def render_chart(*,
 async def list_dashboards():
     return []
 
-@app.get("/dashboards")
-async def dashboard(*, dashboard_id: str):
-    return []
+@app.get("/dashboards/{dashboard_id}", response_class=HTMLResponse)
+async def dashboard(request: Request, dashboard_id: str):
+    if dashboard_id == "business":
+        return templates.TemplateResponse("business.html", {"request": request, "id": id})
+
 
 @app.get("/home", response_class=HTMLResponse)
 async def home():
@@ -86,7 +94,7 @@ async def home():
     <div id="myplot"></div>
     <script>
     async function run() {
-    const response = await fetch('/charts/benefits-by-invoice-status?customer=musterpraxis&start_date=2021-09-01&end_date=2022-04-30')
+    const response = await fetch('/charts/turnover-by-service-type?customer=musterpraxis&start_date=2021-09-01&end_date=2022-04-30')
     const item = await response.json()
     Bokeh.embed.embed_item(item, "myplot")
     }

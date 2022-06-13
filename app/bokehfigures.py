@@ -34,6 +34,8 @@ class AnzahlNeueFaelleProTag(BokehFigure):
                    y_axis_label="Neue Fälle",
                    tooltips=tooltips,
                    x_axis_type="datetime")
+        p.toolbar.logo = None  # type: ignore
+
         p.vbar(x=df.get("date"),
                top=df.get("cases"),
                color="green",
@@ -53,7 +55,11 @@ class VerteilungAltersgruppenSitzungszeiten(BokehFigure):
             ("Altersgruppe", "@age"),
             ("Anzahl Sitzungen", "@count"),
         ]
-        p = figure(title="Verteilung von Altersgruppen auf Sitzungszeiten", y_axis_label="Uhrzeit", x_axis_label="Anzahl Sitzungen", tooltips=tooltips)
+        p = figure(title="Verteilung von Altersgruppen auf Sitzungszeiten",
+                   y_axis_label="Uhrzeit",
+                   x_axis_label="Anzahl Sitzungen",
+                   tooltips=tooltips)
+        p.toolbar.logo = None  # type: ignore
         p.ygrid.grid_line_color = None
         
         data = {}
@@ -98,7 +104,8 @@ class TurnoverPerMonthFigure(BokehFigure):
                    y_axis_label="Umsatz in SFr",
                    x_axis_type="datetime",
                    tools=['pan', 'box_zoom', 'wheel_zoom', 'save','reset', hover])
-        
+        p.toolbar.logo = None  # type: ignore
+
         p.vbar_stack(executing_doctors,
                      x="date",
                      color=brewer['Spectral'][len(executing_doctors)],
@@ -126,9 +133,9 @@ class BenefitsByInvoiceStatusPerDayFigure(BokehFigure):
         #dataframe formatting, sum daily sums by month, index by month, columns for invoice states, values are benefits
         monthly_benefits_by_invoice_status_summary = df.groupby([df.date.dt.to_period('M'),"invStat"], as_index=True).sum().reset_index()
         monthly_benefits_by_invoice_status_summary = monthly_benefits_by_invoice_status_summary.pivot(index="date", columns="invStat", values="effCalcAmtVat").fillna(0)
-        print(monthly_benefits_by_invoice_status_summary)
         monthly_benefits_by_invoice_status_summary.index =  monthly_benefits_by_invoice_status_summary.index.start_time + pd.offsets.SemiMonthEnd() 
 
+        #we require at least 3 columns for bookehs color palettes to work
         for missing_required_column in {"open", "paid", "cancelled"}.difference(benefits_by_invoice_status_per_day.columns):
             benefits_by_invoice_status_per_day[missing_required_column] = 0.0
             monthly_benefits_by_invoice_status_summary[missing_required_column] = 0.0
@@ -145,15 +152,16 @@ class BenefitsByInvoiceStatusPerDayFigure(BokehFigure):
 
         benefits_by_invoice_status_per_day.rename(columns=invoice_states_translation, inplace=True)
         monthly_benefits_by_invoice_status_summary.rename(columns=invoice_states_translation, inplace=True)
-        
+
         invoice_states = [state for state in benefits_by_invoice_status_per_day.columns]
 
 
         hover = HoverTool(names=invoice_states, tooltips=[('Datum', '@date{%F}'),("Name","$name"),("Leistung","@$name SFr")], formatters={'@date': 'datetime'})
         p = figure(title="Leistungen nach Rechnungsstand",
-            y_axis_label="Umsatz in SFr",
+            y_axis_label="Leistungen in SFr",
             x_axis_type="datetime",
             tools=['pan', 'box_zoom', 'wheel_zoom', 'save','reset', hover])
+        p.toolbar.logo = None  # type: ignore
 
         p.vbar_stack(invoice_states,
                      x="date",
@@ -173,5 +181,50 @@ class BenefitsByInvoiceStatusPerDayFigure(BokehFigure):
 
         return p
 
+class TurnoverByServiceTypeFigure(BokehFigure):
+    def setup_figure(self):
+        turnover_by_service_type_per_day = self.data["turnover_by_service_type_per_day"].dataframe
+        
+        service_types_translation = {"SumTotalTar":"Tarmed (Medizinisch)",
+                                     "SumTotalTar2":"Tarmed (Technisch)",
+                                     "SumTotalMedication": "Medikation",
+                                     "SumTotalMigel": "Mittel und Gegenstände (MiGeL)",
+                                     "SumTotalAnalysis": "Labor",
+                                     "SumTotalPhysio": "Physio",
+                                     "SumTotalMisc": "Verschiedenes",
+                                     "SumTotalOther": "Sonstige Aufwände"}
 
-    
+        service_types = list(service_types_translation.values())
+
+        turnover_by_service_type_per_day.rename(columns=service_types_translation, inplace=True)
+
+        turnover_by_service_type_per_month =  turnover_by_service_type_per_day.groupby([turnover_by_service_type_per_day.date.dt.to_period('M')], as_index=True).sum().reset_index()
+        turnover_by_service_type_per_month.date = turnover_by_service_type_per_month.date.astype('datetime64[ns]') + pd.offsets.SemiMonthEnd()
+
+        hover = HoverTool(names=service_types, tooltips=[('Datum', '@date{%F}'),("Name","$name"),("Leistung","@$name{0.00} SFr")], formatters={'@date': 'datetime'})
+        p = figure(title="Umsatz nach Leistungsart",
+                   y_axis_label="Umsatz in SFr",
+                   x_axis_type="datetime",
+                   tools=['pan', 'box_zoom', 'wheel_zoom', 'save','reset', hover])
+        p.toolbar.logo = None  # type: ignore
+
+        p.vbar_stack(service_types,
+                     x="date",
+                     color=brewer['Spectral'][len(service_types)],
+                     fill_alpha=1.00,
+                     width=64_000_000,
+                     name=service_types, 
+                     line_width=0,
+                     source=turnover_by_service_type_per_day)
+
+        p.vbar_stack(service_types,
+                     x="date",
+                     color=brewer['Spectral'][len(service_types)],
+                     fill_alpha=0.35,
+                     width=64_000_000 * 30,
+                     name=service_types, 
+                     line_width=0.4,
+                     legend_label=service_types,
+                     source=turnover_by_service_type_per_month)
+
+        return p
