@@ -15,7 +15,7 @@ log = logging.getLogger()
 class Chart:
     def __init__(self, figure: type[BokehFigure], database: Optional[Database]=None, db_queries: Dict[str, DBQuery]={}, query_parameters: Dict[str, str]={}):
         self.figure = figure
-        self.database: Database|None = database
+        self.database: Optional[Database] = database
         self.database_queries = db_queries
         self._parameterize_database_queries(query_parameters)
 

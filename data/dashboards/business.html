@@ -1,6 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png">
+    <link rel="manifest" href="/static/site.webmanifest">
     <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-2.4.3.min.js"></script>
     <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-gl-2.4.3.min.js"></script>
     <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.4.3.min.js"></script>
@@ -22,7 +26,7 @@
             const chart_json = await response.json()
             Bokeh.embed.embed_item(chart_json, chart_id)
         }
-        
+
         const charts = ["cases-per-day", "turnover-per-month", "benefits-by-invoice-status", "turnover-by-service-type"]
         charts.forEach((chart_id, index) => {
             render_chart(chart_id);

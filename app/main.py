@@ -8,6 +8,7 @@ import uvicorn
 from fastapi import FastAPI, HTTPException, Path, Query, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 
 from charts import (BenefitsByInvoiceStatusPerDay, CasesPerDay,
                     TurnoverByServiceType, TurnoverPerMonth)
@@ -18,6 +19,7 @@ __version__ = "1.0.0"
 app = FastAPI()
 
 templates = Jinja2Templates(directory="data/dashboards")
+app.mount("/static", StaticFiles(directory="data/static"), name="static")
 
 parser = argparse.ArgumentParser(description='datawarehouse visualization service')
 parser.add_argument('--port', type=int, default=int(environ.get("APP_PORT", 8080)), help="run api on this port")
