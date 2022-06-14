@@ -28,7 +28,7 @@ parser.add_argument('--db-host', type=str, default=environ.get("DB_HOST","127.0.
 parser.add_argument('--db-port', type=int, default=int(environ.get("DB_PORT", 3306)), help="connect to this port on the dwh")
 parser.add_argument('--db-suffix', type=str, default=environ.get("DB_SUFFIX","_dwh"), help="append this to the database name before connecting")
 
-args = parser.parse_args()
+args, unknown = parser.parse_known_args()
 
 logging.basicConfig(stream=sys.stdout, level=logging.getLevelName(args.log_level.upper()))
 log = logging.getLogger()
@@ -105,3 +105,4 @@ async def home():
 
 if __name__ == "__main__":
     uvicorn.run("main:app", host="0.0.0.0", port=args.port, log_level=args.log_level)
+
