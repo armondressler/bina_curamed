@@ -1,5 +1,5 @@
 import logging
-from typing import List
+from typing import List, Optional
 
 import mysql.connector
 import pandas as pd
@@ -10,7 +10,7 @@ from transformers import DBQueryResultsTransformer
 log = logging.getLogger()
 
 class DBQuery:
-    def __init__(self, query: str, required_parameters: tuple, transformers: None|List[DBQueryResultsTransformer] = None):
+    def __init__(self, query: str, required_parameters: tuple, transformers: Optional[List[DBQueryResultsTransformer]] = None):
         self.query = query
         self.required_parameters = required_parameters
         self.transformers = transformers or []

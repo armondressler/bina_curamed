@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from bokehfigures import (AnzahlNeueFaelleProTag,
                           BenefitsByInvoiceStatusPerDayFigure, BokehFigure,
@@ -13,7 +13,7 @@ from transformers import (ConvertToDateTypeTransformer,
 log = logging.getLogger()
 
 class Chart:
-    def __init__(self, figure: type[BokehFigure], database: Database|None=None, db_queries: Dict[str, DBQuery]={}, query_parameters: Dict[str, str]={}):
+    def __init__(self, figure: type[BokehFigure], database: Optional[Database]=None, db_queries: Dict[str, DBQuery]={}, query_parameters: Dict[str, str]={}):
         self.figure = figure
         self.database: Database|None = database
         self.database_queries = db_queries
