@@ -1,10 +1,10 @@
 import logging
 from typing import Dict, List, Optional
 
-from bokehfigures import (AnzahlNeueFaelleProTag,
-                          BenefitsByInvoiceStatusPerDayFigure, BokehFigure,
-                          TurnoverByServiceTypeFigure, TurnoverPerMonthFigure,
-                          VerteilungAltersgruppenSitzungszeiten)
+from bokehfigures import (AgeGroupBySessionTimeFigure,
+                          BenefitsByInvoiceStatusFigure, BokehFigure,
+                          NewCasesFigure, TurnoverByServiceTypeFigure,
+                          TurnoverPerMonthFigure)
 from datasources import Database, DBQuery
 from exceptions import ValidationError
 from transformers import (ConvertToDateTypeTransformer,
@@ -50,17 +50,14 @@ class CasesTotal(Chart):
     def __init__(self, database: Database, query_parameters: Dict[str, str] = {}):
         database_queries = {"cases_total": DBQuery(query="SELECT count(*) as cases FROM `case` WHERE created BETWEEN %(start_date)s AND %(end_date)s;",
                                           required_parameters=("start_date", "end_date"))}
-        super().__init__(AnzahlNeueFaelleProTag,
-                         database,
-                         database_queries,
-                         query_parameters)
+        super().__init__(NewCasesFigure, database, database_queries, query_parameters)
             
 class CasesPerDay(Chart):
     def __init__(self, database: Database, query_parameters: Dict[str, str] = {}):
         database_queries = {"cases_per_day": DBQuery(query="WITH recursive date_ranges AS (select %(start_date)s as date union all select date + interval 1 day from date_ranges where date < %(end_date)s) select date,COALESCE(cases, 0) as cases from date_ranges as a left join ( SELECT count(*) as cases,DATE_FORMAT(created,'%Y-%m-%d') as date2 FROM `case` WHERE created BETWEEN %(start_date)s AND %(end_date)s GROUP BY DATE_FORMAT(created,'%Y-%m-%d')) as b  on a.date = b.date2;", 
                                                   required_parameters=("start_date", "end_date"),
                                                   transformers=[ConvertToDateTypeTransformer()])}
-        super().__init__(AnzahlNeueFaelleProTag, database, database_queries, query_parameters)
+        super().__init__(NewCasesFigure, database, database_queries, query_parameters)
 
 
 class AgeGroupBySessionTime(Chart):
@@ -68,7 +65,7 @@ class AgeGroupBySessionTime(Chart):
         database_queries = {"age_group_by_session_time": DBQuery(query="SELECT DATE_FORMAT(s.begin,'%H:%m:%S') AS date,TIMESTAMPDIFF(YEAR, p.birthDate, CURDATE()) AS age FROM session AS s JOIN patient AS p ON s.patient = p.id WHERE s.created BETWEEN %(start_date)s AND %(end_date)s;",
         required_parameters=("start_date", "end_date"),
         transformers=[ConvertToDateTypeTransformer(date_format="%H:%M:%S", date_column_name="date")])}
-        super().__init__(VerteilungAltersgruppenSitzungszeiten, database, database_queries, query_parameters)
+        super().__init__(AgeGroupBySessionTimeFigure, database, database_queries, query_parameters)
 
 class TurnoverPerMonth(Chart):
     def __init__(self, database: Database, query_parameters: Dict[str, str] = {}):
@@ -82,13 +79,13 @@ class TurnoverPerMonth(Chart):
                                                                          FillDateGapsTransformer(date_column_name="date")])}
         super().__init__(TurnoverPerMonthFigure, database, database_queries, query_parameters)
 
-class BenefitsByInvoiceStatusPerDay(Chart):
+class BenefitsByInvoiceStatus(Chart):
     def __init__(self, database: Database, query_parameters: Dict[str, str] = {}):
         database_queries = {"benefits_by_invoice_status": DBQuery(query="SELECT DATE_FORMAT(bc.created,'%Y-%m-%d') AS date, bc.effCalcAmtVat, inv.invStat FROM benefitCombined AS bc JOIN invoice AS inv ON bc.invoice = inv.id WHERE bc.invoice != 'aaaaaaaaaaaaaaaaaaaa' AND (inv.traStat = 'transferred' OR inv.traStat = 'dispatched') AND bc.created BETWEEN %(start_date)s AND %(end_date)s;",
                                                                   required_parameters=("start_date", "end_date"),
                                                                   transformers=[ConvertToDateTypeTransformer(date_column_name="date"),
                                                                                 FillDateGapsTransformer(date_column_name="date",nan_fill={"effCalcAmtVat": 0, "invStat": "paid"})])}
-        super().__init__(BenefitsByInvoiceStatusPerDayFigure, database, database_queries, query_parameters)
+        super().__init__(BenefitsByInvoiceStatusFigure, database, database_queries, query_parameters)
 
 class TurnoverByServiceType(Chart):
     def __init__(self, database: Database, query_parameters: Dict[str, str] = {}):

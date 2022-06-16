@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
-from charts import (BenefitsByInvoiceStatusPerDay, CasesPerDay,
+from charts import (BenefitsByInvoiceStatus, CasesPerDay,
                     TurnoverByServiceType, TurnoverPerMonth)
 from datasources import Database
 
@@ -67,7 +67,7 @@ async def render_chart(*,
     elif chart_id == "turnover-per-month":
         p = TurnoverPerMonth(database=database, query_parameters=query_parameters)
     elif chart_id == "benefits-by-invoice-status":
-        p = BenefitsByInvoiceStatusPerDay(database=database, query_parameters=query_parameters)
+        p = BenefitsByInvoiceStatus(database=database, query_parameters=query_parameters)
     elif chart_id == "turnover-by-service-type":
         p = TurnoverByServiceType(database=database, query_parameters=query_parameters)
     else:

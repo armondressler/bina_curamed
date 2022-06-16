@@ -23,7 +23,7 @@ class BokehFigure:
         return figure()
 
 
-class AnzahlNeueFaelleProTag(BokehFigure):
+class NewCasesFigure(BokehFigure):
     def setup_figure(self):
         df = self.data["cases_per_day"].dataframe
         tooltips = [
@@ -42,7 +42,7 @@ class AnzahlNeueFaelleProTag(BokehFigure):
         p.yaxis.minor_tick_out = 0
         return p
 
-class VerteilungAltersgruppenSitzungszeiten(BokehFigure):
+class AgeGroupBySessionTimeFigure(BokehFigure):
     def setup_figure(self):
         df = self.data["altersgruppe_sitzung_pro_tageszeit"].dataframe
         df["date"] = df["date"].dt.hour
@@ -95,7 +95,7 @@ class TurnoverPerMonthFigure(BokehFigure):
         #dataframe formatting, sum daily sums by month, index by month, columns for doctors names, values are turnover
         monthly_turnover_summary = turnover_by_executing_doctor.groupby([turnover_by_executing_doctor.date.dt.to_period('M'),"combinedName"], as_index=True).sum().reset_index()
         monthly_turnover_summary = monthly_turnover_summary.pivot(index="date", columns="combinedName", values="SumTotalAmount").fillna(0)
-        monthly_turnover_summary.index =  monthly_turnover_summary.index.start_time + pd.offsets.SemiMonthEnd() #ensure monthly vbar is centered in the month, not at the start
+        monthly_turnover_summary.index =  monthly_turnover_summary.index.start_time + pd.offsets.SemiMonthEnd() # type: ignore #ensure monthly vbar is centered in the month, not at the start
         
 
         hover = HoverTool(names=executing_doctors, tooltips=[('Datum', '@date{%F}'),("Name","$name"),("Umsatz","@$name SFr")], formatters={'@date': 'datetime'})
@@ -123,7 +123,7 @@ class TurnoverPerMonthFigure(BokehFigure):
         return p
 
 
-class BenefitsByInvoiceStatusPerDayFigure(BokehFigure):
+class BenefitsByInvoiceStatusFigure(BokehFigure):
     def setup_figure(self):
         df = self.data["benefits_by_invoice_status"].dataframe
         benefits_by_invoice_status_per_day = df.groupby([df.date.dt.to_period('D'),"invStat"], as_index=True).sum().reset_index()
@@ -132,7 +132,7 @@ class BenefitsByInvoiceStatusPerDayFigure(BokehFigure):
         #dataframe formatting, sum daily sums by month, index by month, columns for invoice states, values are benefits
         monthly_benefits_by_invoice_status_summary = df.groupby([df.date.dt.to_period('M'),"invStat"], as_index=True).sum().reset_index()
         monthly_benefits_by_invoice_status_summary = monthly_benefits_by_invoice_status_summary.pivot(index="date", columns="invStat", values="effCalcAmtVat").fillna(0)
-        monthly_benefits_by_invoice_status_summary.index =  monthly_benefits_by_invoice_status_summary.index.start_time + pd.offsets.SemiMonthEnd() 
+        monthly_benefits_by_invoice_status_summary.index =  monthly_benefits_by_invoice_status_summary.index.start_time + pd.offsets.SemiMonthEnd()   # type: ignore
 
         #we require at least 3 columns for bookehs color palettes to work
         for missing_required_column in {"open", "paid", "cancelled"}.difference(benefits_by_invoice_status_per_day.columns):
