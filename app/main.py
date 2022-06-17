@@ -81,12 +81,12 @@ async def list_dashboards():
     return ["business"]
 
 @app.get("/dashboards/{dashboard_id}", response_class=HTMLResponse)
-async def dashboard(request: Request, dashboard_id: str):
+async def render_dashboard(request: Request, dashboard_id: str):
     if dashboard_id == "business":
         return templates.TemplateResponse("business.html", {"request": request, "id": id})
 
 
-@app.get("/home", response_class=HTMLResponse)
+@app.get("/example", response_class=HTMLResponse)
 async def home():
     from bokeh.resources import CDN
     return """
