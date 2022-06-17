@@ -9,13 +9,21 @@ Goals:
   - Provide insights (primarily economic and not medical perspective) into the workings of the practice.
   - Keep it easily to extend further
   
-Praxisspiegel (Management Summary)
+Installation:
 
-- https://www.trustmed.ch/Dienstleistungen/Management_Summary/Management_Summary.php
-- https://www.hawadoc.ch/hawatrust/praxisspiegel-analyse.php
-- http://www.zueridoc.ch/dienstleistungen/praxisspiegel-1qlik/
+Setup a virtualenv and activate it before running the pip install command.
+
+```
+python3 -m pip install -r requirements.txt
+```
+
+Running:
+```
+python3 app/main.py
+```
   
-  
+
+
 TODO:
 - decent URL schema
   - GET /dashboards/business-overview
@@ -24,4 +32,4 @@ TODO:
 - auth
 - input validation for parameters (e.g. start_date/end_date iso 8601)
 - default parameters? redirect to /x?start_date=30daysago&end_date=today
-- cache (-> mark requests for past timeranges as cacheable, excluding objects such as invoices)
+- cache headers (-> mark requests for past timeranges as cacheable, excluding objects such as invoices)

@@ -3,7 +3,7 @@ from typing import Dict
 import numpy as np
 import pandas as pd
 from bokeh.embed import json_item
-from bokeh.models import HoverTool
+from bokeh.models import HoverTool, NumeralTickFormatter
 from bokeh.palettes import Spectral6, brewer
 from bokeh.plotting import ColumnDataSource, figure
 
@@ -80,6 +80,39 @@ class AgeGroupBySessionTimeFigure(BokehFigure):
             else:
                 p.hbar(y="y", left="left", right="right", height=0.75, fill_color="color", source=ColumnDataSource(data))
         return p
+
+class AgeGroupBySexFigure(BokehFigure):
+    def setup_figure(self):
+        df = self.data["age_group_by_sex"].dataframe
+
+        bins = [0,18,40,65,80,120]
+        hist_male, edges_male = np.histogram(df[df["sex"] == "male"]["age"],bins=bins)
+        hist_female, edges_female = np.histogram(df[df["sex"] == "female"]["age"],bins=bins)
+        ageintervals = [f"{low} - {high}" for low,high in zip(edges_male[:-1],edges_male[1:])]
+
+        hover = HoverTool(tooltips=[('Geschlecht', '@designation'), ('Anzahl Patienten', '@count')])
+  
+        p = figure(title="Verteilung von Altersgruppen und Geschlecht",
+                   y_axis_label="Altersgruppe",
+                   x_axis_label="Anzahl Patienten", 
+                   tools=['pan', 'box_zoom', 'wheel_zoom', 'save','reset', hover])
+        p.xaxis[0].formatter = NumeralTickFormatter(format="(0)")
+        p.yaxis.major_label_text_font_size = '0pt'
+        p.toolbar.logo = None  # type: ignore
+        p.ygrid.grid_line_color = None
+
+        
+        color_slice = slice(0,len(ageintervals))
+        colors = Spectral6[color_slice]
+        data_male={"y": [1,2,3,4,5], "left": hist_male * -1, "right": [0] * len(ageintervals), "color": colors, "legend": ageintervals, "designation": ["männlich"]*len(hist_male), "count": hist_male}
+        data_female={"y": [1,2,3,4,5], "left": [0] * len(ageintervals), "right": hist_female, "color": colors, "legend": ageintervals, "designation": ["weiblich"]*len(hist_female), "count": hist_female}        
+        for index, ageinterval in enumerate(ageintervals):
+            p.hbar(y="y", left="left", right="right", height=0.75, fill_color="color", legend_field="legend", source=data_male)
+            p.hbar(y="y", left="left", right="right", height=0.75, fill_color="color", legend_field="legend", source=data_female)
+        return p
+
+
+
 
 #TODO Nur invoices mit invStat paid sollten als Umsatz gezählt werden, mangels Daten in musterpraxis vorerst weggelassen -> where invStat = "paid";
 #TODO combinedName ungünstiger Schlüssel bei gleichnamigen Dr... -> executingDoctor verwenden?
@@ -226,8 +259,42 @@ class TurnoverByServiceTypeFigure(BokehFigure):
                      line_width=0.4,
                      legend_label=service_types,
                      source=turnover_by_service_type_per_month)
+                     
+        return p
 
-        p.legend.click_policy="hide"
 
+
+class TurnoverByActivePatientsFigure(BokehFigure):
+    def setup_figure(self):
+        turnover_per_day = self.data["turnover_per_day"].dataframe
+        active_patients = self.data["active_patients"].dataframe
+
+        turnover_per_day_per_patient = turnover_per_day
+        turnover_per_day_per_patient["SumTotalAmount"] = turnover_per_day_per_patient["SumTotalAmount"] / active_patients.active_patients[0]
+
+        #just for demo
+        fake_santesuisse_index = pd.DataFrame()
+        fake_santesuisse_index["date"] = turnover_per_day["date"].copy()
+        fake_santesuisse_index["SumTotalAmount"] = 8
+
+        hover = HoverTool(tooltips=[('Datum', '@date{%F}'),("Umsatz pro Patient","$y{0.00} SFr")], formatters={'@date': 'datetime'})
+        p = figure(title="Umsatz pro aktivem Patienten",
+                   y_axis_label="Umsatz in SFr",
+                   x_axis_type="datetime",
+                   tools=['pan', 'box_zoom', 'wheel_zoom', 'save','reset', hover])
+
+        p.toolbar.logo = None  # type: ignore
+        p.line(x="date",
+               y="SumTotalAmount",
+               line_width=2,
+               source=turnover_per_day_per_patient)
+
+        p.line(x="date",
+               y="SumTotalAmount",
+               color="red",
+               line_width=4,
+               legend_label="SantéSuisse Index (130)",
+               source=fake_santesuisse_index)
 
         return p
+

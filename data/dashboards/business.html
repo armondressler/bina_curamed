@@ -19,7 +19,7 @@
     </script>
 </head>
 <body>
-    <div class="container bokeh-display-flex-overwrite">
+    <div class="container bokeh-display-flex-overwrite m-1">
         <div class="row my-3">
             <div class="col mx-3" id="cases-per-day"> 
             </div>
@@ -35,6 +35,12 @@
         <div class="row my-3">
             <div class="col mx-3" id="turnover-by-service-type">
             </div>
+            <div class="col mx-3" id="age-group-by-sex">
+            </div>
+        </div>
+        <div class="row my-3">
+            <div class="col mx-3" id="turnover-by-active-patients">
+            </div>
         </div>
     </div>
     <script>
@@ -44,7 +50,7 @@
             Bokeh.embed.embed_item(chart_json, chart_id)
         }
 
-        const charts = ["cases-per-day", "turnover-per-month", "age-group-by-session-time", "benefits-by-invoice-status", "turnover-by-service-type"]
+        const charts = ["cases-per-day", "turnover-per-month", "benefits-by-invoice-status", "age-group-by-session-time", "turnover-by-service-type", "age-group-by-sex", "turnover-by-active-patients"]
         charts.forEach((chart_id, index) => {
             render_chart(chart_id);
         });

@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
-from charts import (AgeGroupBySessionTime, BenefitsByInvoiceStatus, CasesPerDay,
+from charts import (AgeGroupBySex, AgeGroupBySessionTime, BenefitsByInvoiceStatus, CasesPerDay, TurnoverByActivePatients,
                     TurnoverByServiceType, TurnoverPerMonth)
 from datasources import Database
 
@@ -73,10 +73,14 @@ async def render_chart(*,
         p = TurnoverPerMonth(database=database, query_parameters=query_parameters)
     elif chart_id == "age-group-by-session-time":
         p = AgeGroupBySessionTime(database=database, query_parameters=query_parameters)
+    elif chart_id == "age-group-by-sex":
+        p = AgeGroupBySex(database=database, query_parameters=query_parameters)
     elif chart_id == "benefits-by-invoice-status":
         p = BenefitsByInvoiceStatus(database=database, query_parameters=query_parameters)
     elif chart_id == "turnover-by-service-type":
         p = TurnoverByServiceType(database=database, query_parameters=query_parameters)
+    elif chart_id == "turnover-by-active-patients":
+        p = TurnoverByActivePatients(database=database, query_parameters=query_parameters)
     else:
         raise HTTPException(status_code=404, detail="Chart not found")
     return p.get_bokeh_json()
@@ -92,7 +96,7 @@ async def render_dashboard(request: Request, dashboard_id: str):
 
 
 @app.get("/example", response_class=HTMLResponse)
-async def home():
+async def example():
     from bokeh.resources import CDN
     return """
     <!DOCTYPE html>
@@ -103,7 +107,7 @@ async def home():
     <div id="myplot"></div>
     <script>
     async function run() {
-    const response = await fetch('/charts/age-group-by-session-time?customer=musterpraxis&start_date=2021-09-01&end_date=2022-04-30')
+    const response = await fetch('/charts/turnover-by-active-patients?customer=musterpraxis&start_date=2021-09-01&end_date=2022-04-30')
     const item = await response.json()
     Bokeh.embed.embed_item(item, "myplot")
     }

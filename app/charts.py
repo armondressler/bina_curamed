@@ -1,9 +1,9 @@
 import logging
 from typing import Dict, List, Optional
 
-from bokehfigures import (AgeGroupBySessionTimeFigure,
+from bokehfigures import (AgeGroupBySessionTimeFigure, AgeGroupBySexFigure,
                           BenefitsByInvoiceStatusFigure, BokehFigure,
-                          NewCasesFigure, TurnoverByServiceTypeFigure,
+                          NewCasesFigure, TurnoverByActivePatientsFigure, TurnoverByServiceTypeFigure,
                           TurnoverPerMonthFigure)
 from datasources import Database, DBQuery
 from exceptions import ValidationError
@@ -67,6 +67,13 @@ class AgeGroupBySessionTime(Chart):
         transformers=[ConvertToDateTypeTransformer(date_format="%H:%M:%S", date_column_name="date")])}
         super().__init__(AgeGroupBySessionTimeFigure, database, database_queries, query_parameters)
 
+class AgeGroupBySex(Chart):
+    def __init__(self, database: Database, query_parameters: Dict[str, str] = {}):
+        database_queries = {"age_group_by_sex": DBQuery(query="SELECT TIMESTAMPDIFF(YEAR, birthDate, CURDATE()) AS age, sex FROM patient WHERE (created BETWEEN %(start_date)s AND %(end_date)s) AND active = 1 AND (sex = 'male' OR sex = 'female') AND TIMESTAMPDIFF(YEAR, birthDate, CURDATE()) REGEXP '^[0-9]+$';",
+        required_parameters=("start_date", "end_date"),
+        transformers=[])}
+        super().__init__(AgeGroupBySexFigure, database, database_queries, query_parameters)
+
 class TurnoverPerMonth(Chart):
     def __init__(self, database: Database, query_parameters: Dict[str, str] = {}):
         database_queries = {"turnover_per_day": DBQuery(query="WITH RECURSIVE date_ranges AS (SELECT %(start_date)s AS date UNION ALL SELECT date + interval 1 day FROM date_ranges WHERE date < %(end_date)s) SELECT date,COALESCE(SumCalcAmtTotal, 0) AS SumCalcAmtTotal FROM date_ranges AS calendar LEFT JOIN (SELECT SUM(CalcAmtTotal) AS SumCalcAmtTotal,DATE_FORMAT(created,'%Y-%m-%d') AS date2 FROM invoice WHERE (created BETWEEN %(start_date)s AND %(end_date)s) AND (traStat = 'transferred' OR trastat = 'dispatched') GROUP BY DATE_FORMAT(created,'%Y-%m-%d')) AS billing ON calendar.date = billing.date2;",
@@ -102,3 +109,14 @@ class TurnoverByServiceType(Chart):
                                                                                                                                                 "SumTotalMisc": 0.0,
                                                                                                                                                 "SumTotalOther": 0.0 })])}
         super().__init__(TurnoverByServiceTypeFigure, database, database_queries, query_parameters)
+
+class TurnoverByActivePatients(Chart):
+    def __init__(self, database: Database, query_parameters: Dict[str, str] = {}):
+        database_queries = {"turnover_per_day": DBQuery(query="SELECT DATE_FORMAT(`date`,'%Y-%m-%d') AS date,SUM(totalAmount) AS SumTotalAmount FROM invoicePart AS invp JOIN invoice AS inv ON invp.invoice = inv.id WHERE (invp.invoice != 'aaaaaaaaaaaaaaaaaaaa') AND (inv.created BETWEEN %(start_date)s AND %(end_date)s) GROUP BY DATE_FORMAT(`date`,'%Y-%m-%d')",
+                                                                        required_parameters=("start_date", "end_date"),
+                                                                        transformers=[ConvertToDateTypeTransformer(date_column_name="date"),
+                                                                                      FillDateGapsTransformer(date_column_name="date",nan_fill={"SumTotalAmount":0.0})]),
+                            "active_patients": DBQuery(query="SELECT count(active) as active_patients from patient;",
+                                                       required_parameters=(),
+                                                       transformers=[])}
+        super().__init__(TurnoverByActivePatientsFigure, database, database_queries, query_parameters)
