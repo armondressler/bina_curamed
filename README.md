@@ -1,4 +1,4 @@
-# bina_curamed
+# curaMED Datawarehouse Visualizer
 School project (business intelligence &amp; analytics): Visualize parts of the curamed PIS (practice information system) datawarehouse.
 
 
