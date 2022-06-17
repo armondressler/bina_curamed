@@ -16,7 +16,12 @@ from datasources import Database
 
 __version__ = "1.0.0"
 
-app = FastAPI()
+app = FastAPI(title="curaMED Datawarehouse Visualizer",
+              description="Mostly visualizes the curaMED Datawarehouse",
+              version=__version__,
+              contact={"name": "Armon Dressler",
+                       "url": "https://github.com/armondressler/bina_curamed",
+                       "email": "armon.dressler@stud.hslu.ch",})
 
 templates = Jinja2Templates(directory="data/dashboards")
 app.mount("/static", StaticFiles(directory="data/static"), name="static")
