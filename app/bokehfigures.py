@@ -44,7 +44,7 @@ class NewCasesFigure(BokehFigure):
 
 class AgeGroupBySessionTimeFigure(BokehFigure):
     def setup_figure(self):
-        df = self.data["altersgruppe_sitzung_pro_tageszeit"].dataframe
+        df = self.data["age_group_by_session_time"].dataframe
         df["date"] = df["date"].dt.hour
         hist, xedges, yedges = np.histogram2d(df["date"],df["age"],bins=[[0,10,12,15,24],[0,18,40,65,80,120]])
         timeintervals = [f"{low}:00 - {high}:00" for low,high in zip(xedges[:-1],xedges[1:])]
@@ -73,7 +73,7 @@ class AgeGroupBySessionTimeFigure(BokehFigure):
             data["legend_label"] = ageintervals
             data["y"] = [timeindex] * len(a)
             p.yaxis.major_label_overrides[timeindex] = timeinterval
-            p.legend.title = 'Altersgruppen'
+            #p.legend.title = 'Altersgruppen'
             if timeindex == 0:
                 p.hbar(y="y", left="left", right="right", height=0.75, fill_color="color", source=ColumnDataSource(data), legend_group="legend_label")
             else:

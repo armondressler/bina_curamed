@@ -10,7 +10,7 @@ from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
-from charts import (BenefitsByInvoiceStatus, CasesPerDay,
+from charts import (AgeGroupBySessionTime, BenefitsByInvoiceStatus, CasesPerDay,
                     TurnoverByServiceType, TurnoverPerMonth)
 from datasources import Database
 
@@ -36,7 +36,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.getLevelName(args.log_level
 log = logging.getLogger()
 
 @app.get("/version")
-async def root():
+async def version():
     return __version__
 
 @app.get("/health")
@@ -46,7 +46,7 @@ def health():
 
 @app.get("/charts")
 async def list_charts():
-    return []
+    return ["cases-per-day","age-group-by-session-time", "turnover-per-month","benefits-by-invoice-status","turnover-by-service-type"]
 
 @app.get("/charts/{chart_id}")
 async def render_chart(*,
@@ -66,6 +66,8 @@ async def render_chart(*,
         p = CasesPerDay(database=database, query_parameters=query_parameters)
     elif chart_id == "turnover-per-month":
         p = TurnoverPerMonth(database=database, query_parameters=query_parameters)
+    elif chart_id == "age-group-by-session-time":
+        p = AgeGroupBySessionTime(database=database, query_parameters=query_parameters)
     elif chart_id == "benefits-by-invoice-status":
         p = BenefitsByInvoiceStatus(database=database, query_parameters=query_parameters)
     elif chart_id == "turnover-by-service-type":
@@ -76,7 +78,7 @@ async def render_chart(*,
 
 @app.get("/dashboards")
 async def list_dashboards():
-    return []
+    return ["business"]
 
 @app.get("/dashboards/{dashboard_id}", response_class=HTMLResponse)
 async def dashboard(request: Request, dashboard_id: str):
@@ -96,7 +98,7 @@ async def home():
     <div id="myplot"></div>
     <script>
     async function run() {
-    const response = await fetch('/charts/turnover-by-service-type?customer=musterpraxis&start_date=2021-09-01&end_date=2022-04-30')
+    const response = await fetch('/charts/age-group-by-session-time?customer=musterpraxis&start_date=2021-09-01&end_date=2022-04-30')
     const item = await response.json()
     Bokeh.embed.embed_item(item, "myplot")
     }

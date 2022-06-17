@@ -1,10 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png">
     <link rel="manifest" href="/static/site.webmanifest">
+    <link rel="stylesheet" href="/static/stylesheets/site.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-0evHe/X+R7YkIZDRvuzKMRqM+OrBnVFBL6DOitfPri4tjfHxaWutUpFmBp4vmVor" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.0-beta1/dist/js/bootstrap.bundle.min.js" integrity="sha384-pprn3073KE6tl6bjs2QrFaJGz5/SUsLqktiwsUTF55Jfv3qYSDhgCecCxMW52nD2" crossorigin="anonymous"></script>
     <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-2.4.3.min.js"></script>
     <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-gl-2.4.3.min.js"></script>
     <script type="text/javascript" src="https://cdn.bokeh.org/bokeh/release/bokeh-widgets-2.4.3.min.js"></script>
@@ -15,11 +19,24 @@
     </script>
 </head>
 <body>
-    <div id="cases-per-day"></div>
-    <div id="turnover-per-month"></div>
-    <div id="benefits-by-invoice-status"></div>
-    <div id="turnover-by-service-type"></div>
-    <div id=""></div>
+    <div class="container bokeh-display-flex-overwrite">
+        <div class="row my-3">
+            <div class="col mx-3" id="cases-per-day"> 
+            </div>
+            <div class="col mx-3" id="turnover-per-month">
+            </div>
+        </div>
+        <div class="row my-3">
+            <div class="col mx-3" id="benefits-by-invoice-status">
+            </div>
+            <div class="col mx-3" id="age-group-by-session-time">
+            </div>
+        </div>
+        <div class="row my-3">
+            <div class="col mx-3" id="turnover-by-service-type">
+            </div>
+        </div>
+    </div>
     <script>
         async function render_chart(chart_id) {    
             const response = await fetch("/charts/" + chart_id + "?customer=musterpraxis&start_date=2021-09-01&end_date=2022-04-30")
@@ -27,7 +44,7 @@
             Bokeh.embed.embed_item(chart_json, chart_id)
         }
 
-        const charts = ["cases-per-day", "turnover-per-month", "benefits-by-invoice-status", "turnover-by-service-type"]
+        const charts = ["cases-per-day", "turnover-per-month", "age-group-by-session-time", "benefits-by-invoice-status", "turnover-by-service-type"]
         charts.forEach((chart_id, index) => {
             render_chart(chart_id);
         });

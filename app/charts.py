@@ -90,15 +90,15 @@ class BenefitsByInvoiceStatus(Chart):
 class TurnoverByServiceType(Chart):
     def __init__(self, database: Database, query_parameters: Dict[str, str] = {}):
         database_queries = {"turnover_by_service_type_per_day": DBQuery(query="SELECT DATE_FORMAT(`date`,'%Y-%m-%d') AS date,SUM(totalAmount) AS SumTotalAmount,SUM(totalTar) AS SumTotalTar,SUM(totalTar2) AS SumTotalTar2,SUM(totalMedication) as SumTotalMedication,SUM(totalMigel) AS SumTotalMigel,SUM(totalAnalysis) AS SumTotalAnalysis,SUM(totalPhysio) AS SumTotalPhysio, SUM(totalMisc) AS SumTotalMisc,SUM(totalOther) AS SumTotalOther FROM invoicePart AS invp JOIN invoice AS inv ON invp.invoice = inv.id WHERE (invp.invoice != 'aaaaaaaaaaaaaaaaaaaa') AND (inv.created BETWEEN %(start_date)s AND %(end_date)s) GROUP BY DATE_FORMAT(`date`,'%Y-%m-%d')",
-                                                       required_parameters=("start_date", "end_date"),
-                                                        transformers=[ConvertToDateTypeTransformer(date_column_name="date"),
-                                                                      FillDateGapsTransformer(date_column_name="date",nan_fill={"SumTotalAmount":0.0,
-                                                                                                                                "SumTotalTar": 0.0,
-                                                                                                                                "SumTotalTar2": 0.0,
-                                                                                                                                "SumTotalMedication": 0.0,
-                                                                                                                                "SumTotalMigel": 0.0,
-                                                                                                                                "SumTotalAnalysis": 0.0,
-                                                                                                                                "SumTotalPhysio": 0.0,
-                                                                                                                                "SumTotalMisc": 0.0,
-                                                                                                                                "SumTotalOther": 0.0 })])}
+                                                                        required_parameters=("start_date", "end_date"),
+                                                                        transformers=[ConvertToDateTypeTransformer(date_column_name="date"),
+                                                                                      FillDateGapsTransformer(date_column_name="date",nan_fill={"SumTotalAmount":0.0,
+                                                                                                                                                "SumTotalTar": 0.0,
+                                                                                                                                                "SumTotalTar2": 0.0,
+                                                                                                                                                "SumTotalMedication": 0.0,
+                                                                                                                                                "SumTotalMigel": 0.0,
+                                                                                                                                                "SumTotalAnalysis": 0.0,
+                                                                                                                                                "SumTotalPhysio": 0.0,
+                                                                                                                                                "SumTotalMisc": 0.0,
+                                                                                                                                                "SumTotalOther": 0.0 })])}
         super().__init__(TurnoverByServiceTypeFigure, database, database_queries, query_parameters)
