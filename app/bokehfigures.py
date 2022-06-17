@@ -1,4 +1,3 @@
-from calendar import month
 from typing import Dict
 
 import numpy as np
@@ -27,7 +26,7 @@ class NewCasesFigure(BokehFigure):
     def setup_figure(self):
         df = self.data["cases_per_day"].dataframe
         tooltips = [
-            ("Anzahl Fälle", "@top"),
+            ("Anzahl Fälle", "@y"),
         ]
         p = figure(title="Neue Fälle pro Tag",
                    y_axis_label="Neue Fälle",
@@ -35,10 +34,12 @@ class NewCasesFigure(BokehFigure):
                    x_axis_type="datetime")
         p.toolbar.logo = None  # type: ignore
 
-        p.vbar(x=df.get("date"),
-               top=df.get("cases"),
-               color="green",
-               width=64_000_000)
+        #p.vbar(x=df.get("date"),
+        #       top=df.get("cases"),
+        #       color="green",
+        #       width=64_000_000)
+
+        p.line(x=df.get("date"), y=df.get("cases"), color="green", line_width=2)
         p.yaxis.minor_tick_out = 0
         return p
 
@@ -104,7 +105,7 @@ class TurnoverPerMonthFigure(BokehFigure):
                    x_axis_type="datetime",
                    tools=['pan', 'box_zoom', 'wheel_zoom', 'save','reset', hover])
         p.toolbar.logo = None  # type: ignore
-
+    
         p.vbar_stack(executing_doctors,
                      x="date",
                      color=brewer['Spectral'][len(executing_doctors)],
@@ -205,8 +206,8 @@ class TurnoverByServiceTypeFigure(BokehFigure):
                    y_axis_label="Umsatz in SFr",
                    x_axis_type="datetime",
                    tools=['pan', 'box_zoom', 'wheel_zoom', 'save','reset', hover])
-        p.toolbar.logo = None  # type: ignore
 
+        p.toolbar.logo = None  # type: ignore
         p.vbar_stack(service_types,
                      x="date",
                      color=brewer['Spectral'][len(service_types)],
@@ -225,5 +226,8 @@ class TurnoverByServiceTypeFigure(BokehFigure):
                      line_width=0.4,
                      legend_label=service_types,
                      source=turnover_by_service_type_per_month)
+
+        p.legend.click_policy="hide"
+
 
         return p
